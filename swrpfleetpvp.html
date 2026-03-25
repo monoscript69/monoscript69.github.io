@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Star Wars: Битва флотов | Пошаговая стратегия</title>
+    <meta name="description" content="Star Wars: Битва флотов - пошаговая карточная стратегия">
+    <title>⭐ Star Wars: Битва флотов | Пошаговая стратегия</title>
     <style>
         * {
             margin: 0;
@@ -13,23 +14,40 @@
         }
 
         body {
-            background: radial-gradient(ellipse at center, #020617 0%, #000000 100%);
+            background: radial-gradient(ellipse at 30% 40%, #030712 0%, #000000 100%);
             font-family: 'Segoe UI', 'Orbitron', 'Arial', sans-serif;
-            padding: 20px;
+            padding: 16px;
             min-height: 100vh;
-            color: #ffebc2;
         }
 
-        /* Главный контейнер */
+        /* Анимированные звезды */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: radial-gradient(2px 2px at 20px 30px, #fff, rgba(0,0,0,0)),
+                              radial-gradient(1px 1px at 80px 150px, #ffd700, rgba(0,0,0,0));
+            background-size: 200px 200px, 300px 300px;
+            background-repeat: repeat;
+            opacity: 0.3;
+            pointer-events: none;
+            z-index: 0;
+        }
+
         .game-container {
             max-width: 1600px;
             margin: 0 auto;
-            background: rgba(0, 0, 0, 0.65);
-            backdrop-filter: blur(3px);
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
             border-radius: 48px;
             padding: 20px;
-            border: 2px solid #ffd966;
-            box-shadow: 0 0 40px rgba(255, 200, 50, 0.3);
+            border: 2px solid #fbbf24;
+            box-shadow: 0 0 40px rgba(251, 191, 36, 0.3);
+            position: relative;
+            z-index: 1;
         }
 
         /* Верхняя панель */
@@ -38,66 +56,67 @@
             justify-content: space-between;
             flex-wrap: wrap;
             gap: 15px;
-            background: #0a0f1ed9;
-            padding: 15px 25px;
+            background: #0a0f1fcc;
+            padding: 12px 24px;
             border-radius: 60px;
             margin-bottom: 25px;
-            border: 1px solid #ffc857;
+            border: 1px solid #fbbf24;
         }
 
-        .distance-card, .round-card {
+        .info-card {
             background: #000000aa;
             padding: 8px 20px;
             border-radius: 40px;
             display: flex;
             align-items: center;
-            gap: 15px;
+            gap: 12px;
             font-weight: bold;
-            font-size: 1.3rem;
+            font-size: 1.2rem;
         }
 
-        .distance-value, .round-value {
+        .info-value {
             font-size: 2rem;
             font-weight: 800;
-            color: #ffaa33;
+            color: #fbbf24;
             min-width: 50px;
             text-align: center;
         }
 
-        .skip-round-btn {
-            background: #7a2e2e;
+        .end-round-btn {
+            background: #7c2d12;
             border: none;
-            padding: 8px 25px;
+            padding: 8px 28px;
             border-radius: 40px;
             color: white;
             font-weight: bold;
             cursor: pointer;
             transition: 0.2s;
+            font-family: inherit;
         }
 
-        .skip-round-btn:active { transform: scale(0.96);}
+        .end-round-btn:active { transform: scale(0.96); background: #9a3412;}
 
-        /* Два флота */
+        /* Флоты */
         .fleets {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 25px;
+            gap: 24px;
             margin-bottom: 25px;
         }
 
         .fleet {
-            background: rgba(10, 20, 30, 0.7);
+            background: rgba(0, 0, 0, 0.6);
             border-radius: 32px;
             padding: 20px;
-            backdrop-filter: blur(4px);
             border-top: 4px solid;
+            backdrop-filter: blur(4px);
         }
 
         .fleet-republic { border-top-color: #3b82f6; }
-        .fleet-cis { border-top-color: #dc2626; }
+        .fleet-cis { border-top-color: #ef4444; }
 
         .fleet-title {
-            font-size: 1.8rem;
+            font-size: 1.6rem;
             text-align: center;
             margin-bottom: 20px;
             display: flex;
@@ -107,82 +126,82 @@
         }
 
         .ship-card {
-            background: linear-gradient(135deg, #1e2a3a, #0f1722);
+            background: linear-gradient(135deg, #1e293b, #0f172a);
             border-radius: 24px;
-            padding: 15px;
-            margin-bottom: 15px;
-            border-left: 6px solid;
+            padding: 14px;
+            margin-bottom: 14px;
+            border-left: 5px solid;
             transition: all 0.2s;
             cursor: pointer;
         }
 
         .ship-card.active-ship {
             background: linear-gradient(135deg, #2d4a6e, #1e3a5f);
-            box-shadow: 0 0 0 2px #ffd966, 0 0 15px gold;
+            box-shadow: 0 0 0 2px #fbbf24, 0 0 20px gold;
+        }
+
+        .ship-card.disabled-ship {
+            opacity: 0.6;
+            filter: grayscale(0.3);
         }
 
         .ship-name {
-            font-size: 1.3rem;
+            font-size: 1.2rem;
             font-weight: bold;
-            margin-bottom: 8px;
             display: flex;
             justify-content: space-between;
+            margin-bottom: 8px;
         }
 
-        .ship-energy {
-            background: #2c2c2c;
+        .energy-badge {
+            background: #2d2d2d;
             padding: 2px 12px;
             border-radius: 20px;
-            font-size: 0.9rem;
+            font-size: 0.8rem;
         }
 
-        .ship-systems {
+        .systems-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 8px;
-            margin: 12px 0;
-            font-size: 0.8rem;
+            gap: 6px;
+            margin: 10px 0;
+            font-size: 0.7rem;
         }
 
         .system {
             background: #00000066;
             padding: 4px;
-            border-radius: 12px;
+            border-radius: 10px;
             text-align: center;
         }
 
-        .system-name { font-weight: bold; font-size: 0.7rem; }
-        .system-hp { font-family: monospace; }
-
-        .ship-stats {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 8px;
-            font-size: 0.8rem;
+        .system.broken {
+            background: #7f1a1a;
+            text-decoration: line-through;
         }
 
         .action-buttons {
             display: flex;
             flex-wrap: wrap;
-            gap: 8px;
-            margin-top: 12px;
+            gap: 6px;
+            margin-top: 10px;
         }
 
         .action-btn {
-            background: #2c3e2f;
+            background: #334155;
             border: none;
-            padding: 6px 12px;
+            padding: 5px 10px;
             border-radius: 20px;
             color: white;
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             cursor: pointer;
             transition: 0.1s;
         }
 
         .action-btn:active { transform: scale(0.95);}
-        .action-btn.disabled { opacity: 0.4; cursor: not-allowed;}
+        .action-btn.disabled { opacity: 0.4; cursor: not-allowed; background: #1e293b;}
 
-        /* Лог битвы */
+        /* Лог */
         .combat-log {
             background: #000000aa;
             border-radius: 28px;
@@ -190,450 +209,505 @@
             height: 180px;
             overflow-y: auto;
             font-family: monospace;
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             margin-top: 20px;
+            border: 1px solid #fbbf2444;
         }
 
         .restart-btn {
-            background: #b8860b;
+            background: #b45309;
             border: none;
-            padding: 12px 32px;
+            padding: 10px 32px;
             border-radius: 40px;
             font-weight: bold;
             font-size: 1rem;
             margin-top: 15px;
             cursor: pointer;
             color: white;
+            transition: 0.2s;
         }
+
+        .restart-btn:hover { background: #c2410c;}
 
         @media (max-width: 900px) {
             .fleets { grid-template-columns: 1fr; }
-            .ship-systems { grid-template-columns: 1fr 1fr; }
+            .systems-grid { grid-template-columns: repeat(2, 1fr); }
         }
     </style>
 </head>
 <body>
 <div class="game-container">
     <div class="status-bar">
-        <div class="distance-card">🌌 ДИСТАНЦИЯ: <span class="distance-value" id="distanceValue">6</span></div>
-        <div class="round-card">⚡ РАУНД: <span class="round-value" id="roundValue">1</span></div>
-        <button class="skip-round-btn" id="skipRoundBtn">⏭️ ЗАВЕРШИТЬ РАУНД (сброс энергии)</button>
+        <div class="info-card">🌌 ДИСТАНЦИЯ: <span class="info-value" id="distanceValue">6</span></div>
+        <div class="info-card">⚡ РАУНД: <span class="info-value" id="roundValue">1</span></div>
+        <button class="end-round-btn" id="endRoundBtn">⏭️ ЗАВЕРШИТЬ РАУНД</button>
     </div>
 
     <div class="fleets">
-        <!-- Флот Галактической Республики (ВАР) -->
-        <div class="fleet fleet-republic" id="republicFleet">
+        <div class="fleet fleet-republic">
             <div class="fleet-title">✨ ГАЛАКТИЧЕСКАЯ РЕСПУБЛИКА ✨</div>
             <div id="republicShips"></div>
         </div>
-
-        <!-- Флот КНС -->
-        <div class="fleet fleet-cis" id="cisFleet">
+        <div class="fleet fleet-cis">
             <div class="fleet-title">⚙️ КОНФЕДЕРАЦИЯ НЕЗАВИСИМЫХ СИСТЕМ ⚙️</div>
             <div id="cisShips"></div>
         </div>
     </div>
 
     <div class="combat-log" id="combatLog">
-        📡 Войдите в систему командования. Выберите корабль и действие.<br>
-        ⚡ Каждое действие тратит 1 Энергию. Когда энергия всех кораблей кончится — начнётся новый раунд.<br>
-        🎯 Учитывайте дистанцию! Легкие корабли маневрируют на 2.
+        ⚡ СИСТЕМЫ АКТИВИРОВАНЫ. Выберите корабль и действие.<br>
+        📡 Каждое действие тратит 1 Энергию. После исчерпания энергии всех кораблей раунд завершится.<br>
+        🎯 Дистанция влияет на урон и шанс попадания!
     </div>
     
     <div style="display: flex; justify-content: center; margin-top: 15px;">
-        <button class="restart-btn" id="restartGameBtn">🔄 НОВАЯ БИТВА</button>
+        <button class="restart-btn" id="restartBtn">🔄 НОВАЯ БИТВА</button>
     </div>
 </div>
 
 <script>
-    // ------------------- ДАННЫЕ КОРАБЛЕЙ (по документу) -------------------
+    // ==================== ДАННЫЕ КОРАБЛЕЙ ====================
     const SHIPS_DATA = {
-        // Республика (ВАР)
-        "Арквитенс": {
-            side: "rep", class: "легкий", maxEnergy: 4, energy: 4,
-            systems: { shields: 3, weapons: 3, engines: 4, hull: 6 },
-            special: { name: "Пробивной выстрел", desc: "Наносит на 1 больше урона сквозь щиты (дист.1, перезарядка 1 раунд)", cd: 0, maxCd: 1, effect: "armorPierce" },
-            passive: "Если не атаковал в этом раунде → 50% уклонение",
-            canEvade: true
-        },
-        "Аккламатор": {
-            side: "rep", class: "легкий", maxEnergy: 3, energy: 3,
-            systems: { shields: 4, weapons: 4, engines: 4, hull: 8 },
-            special: { name: "Тактическая поддержка", desc: "+1 урона всем союзникам по цели на 1 раунд (дист.2, перезарядка 1)", cd: 0, maxCd: 1, effect: "allyBuff" },
-            passive: "20% шанс двойного урона при атаке"
-        },
-        "Венатор": {
-            side: "rep", class: "средний", maxEnergy: 2, energy: 2,
-            systems: { shields: 5, weapons: 5, engines: 4, hull: 10 },
-            special: { name: "Прикрытие", desc: "Полностью защищает союзника на 1 раунд (перезарядка 2)", cd: 0, maxCd: 2, effect: "coverAlly" },
-            passive: "Первый выстрел в раунде +1 урон"
-        },
-        "Центакс": {
-            side: "rep", class: "средний", maxEnergy: 2, energy: 2,
-            systems: { shields: 4, weapons: 6, engines: 5, hull: 11 },
-            special: { name: "Тяжелый залп", desc: "Стреляет только на дист.≤3, +1 урон", effect: "heavyShot" },
-            passive: "Атака на дист.1 запрещает врагу движение на 1 раунд"
-        },
-        "Мандатор": {
-            side: "rep", class: "тяжелый", maxEnergy: 2, energy: 2,
-            systems: { shields: 5, weapons: 9, engines: 7, hull: 17 },
-            special: { name: "Доп. щиты", desc: "+2 временных щита (не восст.)", cd: 0, maxCd: 3, effect: "bonusShield" },
-            passive: "Дистанция ≤2 → +2 урона"
-        },
+        // Республика
+        "Арквитенс": { side: "rep", class: "легкий", maxEnergy: 4, shields: 3, weapons: 3, engines: 4, hull: 6,
+            special: { name: "Пробивной выстрел", cd: 0, cdMax: 1, effect: "pierce" },
+            passive: "Уклонение 50% если не атаковал" },
+        "Аккламатор": { side: "rep", class: "легкий", maxEnergy: 3, shields: 4, weapons: 4, engines: 4, hull: 8,
+            special: { name: "Тактическая поддержка", cd: 0, cdMax: 1, effect: "buffAlly" },
+            passive: "20% шанс двойного урона" },
+        "Венатор": { side: "rep", class: "средний", maxEnergy: 2, shields: 5, weapons: 5, engines: 4, hull: 10,
+            special: { name: "Прикрытие", cd: 0, cdMax: 2, effect: "cover" },
+            passive: "Первый выстрел в раунде +1 урон" },
+        "Центакс": { side: "rep", class: "средний", maxEnergy: 2, shields: 4, weapons: 6, engines: 5, hull: 11,
+            special: { name: "Тяжелый залп", cd: 0, cdMax: 0, effect: "heavyShot" },
+            passive: "Атака на дист.1 запрещает движение врагу" },
+        "Мандатор": { side: "rep", class: "тяжелый", maxEnergy: 2, shields: 5, weapons: 9, engines: 7, hull: 17,
+            special: { name: "Доп. щиты", cd: 0, cdMax: 3, effect: "bonusShield" },
+            passive: "Дистанция ≤2 → +2 урона" },
         // КНС
-        "Щедрый": {
-            side: "cis", class: "легкий", maxEnergy: 3, energy: 3,
-            systems: { shields: 4, weapons: 4, engines: 3, hull: 8 },
-            special: { name: "Продвинутый ремонт", desc: "Чинит систему на 2 +1 эффективность", cd: 0, maxCd: 1, effect: "betterRepair" },
-            passive: "Если не чинил в раунде → +1 урон"
-        },
-        "Провидение": {
-            side: "cis", class: "средний", maxEnergy: 2, energy: 2,
-            systems: { shields: 5, weapons: 5, engines: 4, hull: 10 },
-            special: { name: "Системная атака", desc: "Отключает систему врага (не корпус) на 1 раунд (дист.2)", cd: 0, maxCd: 2, effect: "disableSystem" },
-            passive: "Если не двигался → +1 урон к первой атаке"
-        },
-        "Бунтарь": {
-            side: "cis", class: "средний", maxEnergy: 2, energy: 2,
-            systems: { shields: 3, weapons: 6, engines: 4, hull: 11 },
-            special: { name: "Двойной выстрел", desc: "Две атаки, но после этого раунд не стреляет", cd: 0, maxCd: 1, effect: "doubleShot" },
-            passive: "40% шанс игнорировать щиты при спец.умении"
-        },
-        "Барышник": {
-            side: "cis", class: "тяжелый", maxEnergy: 2, energy: 2,
-            systems: { shields: 4, weapons: 6, engines: 5, hull: 14 },
-            special: { name: "Блокировка", desc: "Блокирует каждое второе попадание по цели 1 раунд", cd: 0, maxCd: 2, effect: "block" },
-            passive: "Если не тратил энергию → +1 щит союзнику"
-        },
-        "Покоритель": {
-            side: "cis", class: "тяжелый", maxEnergy: 2, energy: 2,
-            systems: { shields: 5, weapons: 5, engines: 6, hull: 16 },
-            special: { name: "Гравитационный толчок", desc: "Изменяет дистанцию врага на 2", cd: 0, maxCd: 1, effect: "pushDistance" },
-            passive: "После спец.умения +2 урона на 1 раунд"
-        }
+        "Щедрый": { side: "cis", class: "легкий", maxEnergy: 3, shields: 4, weapons: 4, engines: 3, hull: 8,
+            special: { name: "Продвинутый ремонт", cd: 0, cdMax: 1, effect: "betterRepair" },
+            passive: "Если не чинил → +1 урон" },
+        "Провидение": { side: "cis", class: "средний", maxEnergy: 2, shields: 5, weapons: 5, engines: 4, hull: 10,
+            special: { name: "Системная атака", cd: 0, cdMax: 2, effect: "disable" },
+            passive: "Если не двигался → +1 урон" },
+        "Бунтарь": { side: "cis", class: "средний", maxEnergy: 2, shields: 3, weapons: 6, engines: 4, hull: 11,
+            special: { name: "Двойной выстрел", cd: 0, cdMax: 1, effect: "doubleShot" },
+            passive: "40% шанс игнорировать щиты при спец." },
+        "Барышник": { side: "cis", class: "тяжелый", maxEnergy: 2, shields: 4, weapons: 6, engines: 5, hull: 14,
+            special: { name: "Блокировка", cd: 0, cdMax: 2, effect: "block" },
+            passive: "Если не тратил энергию → +1 щит союзнику" },
+        "Покоритель": { side: "cis", class: "тяжелый", maxEnergy: 2, shields: 5, weapons: 5, engines: 6, hull: 16,
+            special: { name: "Гравитационный толчок", cd: 0, cdMax: 1, effect: "push" },
+            passive: "После спец. +2 урона" }
     };
 
-    // начальный флот
-    const INIT_FLEET = {
+    const FLEET_COMP = {
         rep: ["Арквитенс", "Аккламатор", "Венатор", "Центакс", "Мандатор"],
         cis: ["Щедрый", "Провидение", "Бунтарь", "Барышник", "Покоритель"]
     };
 
     // Глобальное состояние
-    let gameState = {
+    let game = {
         distance: 6,
         round: 1,
-        currentActionShip: null,   // корабль, который сейчас делает ход
-        ships: [],                 // все корабли с обновленными параметрами
+        ships: [],
+        currentShipId: null,
+        waitingTarget: null, // { type, attackerId, callback }
         logs: [],
-        waitingForTarget: null,    // { type, attacker, actionType, extraData }
-        combatRoundActive: true,
-        activeBuffs: []           // временные эффекты
+        roundActive: true
     };
 
-    // Вспомогательные функции
     function addLog(msg) {
-        gameState.logs.unshift(`[Раунд ${gameState.round}] ${msg}`);
-        if (gameState.logs.length > 35) gameState.logs.pop();
+        game.logs.unshift(`[Раунд ${game.round}] ${msg}`);
+        if (game.logs.length > 25) game.logs.pop();
         const logDiv = document.getElementById("combatLog");
-        if (logDiv) logDiv.innerHTML = gameState.logs.map(l => `📟 ${l}`).join("<br>");
+        if (logDiv) logDiv.innerHTML = game.logs.map(l => `📟 ${l}`).join("<br>");
     }
 
-    // Получить корабль по ID
-    function getShipById(id) { return gameState.ships.find(s => s.id === id); }
+    function getShip(id) { return game.ships.find(s => s.id === id); }
 
-    // Обновление интерфейса
-    function render() {
-        document.getElementById("distanceValue").innerText = gameState.distance;
-        document.getElementById("roundValue").innerText = gameState.round;
-
-        const repDiv = document.getElementById("republicShips");
-        const cisDiv = document.getElementById("cisShips");
-        repDiv.innerHTML = "";
-        cisDiv.innerHTML = "";
-
-        gameState.ships.forEach(ship => {
-            const shipCard = document.createElement("div");
-            shipCard.className = `ship-card ${gameState.currentActionShip === ship.id ? "active-ship" : ""}`;
-            shipCard.onclick = () => { if (!gameState.waitingForTarget && gameState.combatRoundActive) selectShip(ship.id); };
-            
-            const systemsHtml = `
-                <div class="ship-systems">
-                    <div class="system">🛡️ Щиты:<br>${ship.systems.shields}/${ship.maxSystems.shields}</div>
-                    <div class="system">🔫 Орудия:<br>${ship.systems.weapons}/${ship.maxSystems.weapons}</div>
-                    <div class="system">⚙️ Двигатели:<br>${ship.systems.engines}/${ship.maxSystems.engines}</div>
-                    <div class="system">🏗️ Корпус:<br>${ship.systems.hull}/${ship.maxSystems.hull}</div>
-                </div>
-                <div class="ship-stats">
-                    <span>⚡ Энергия: ${ship.energy}/${ship.maxEnergy}</span>
-                    <span>📏 Класс: ${ship.class}</span>
-                </div>
-                <div class="action-buttons" id="actions-${ship.id}"></div>
-            `;
-            
-            shipCard.innerHTML = `
-                <div class="ship-name">
-                    <span>${ship.name}</span>
-                    <span class="ship-energy">❤️ ${ship.systems.hull > 0 ? "активен" : "УНИЧТОЖЕН"}</span>
-                </div>
-                ${systemsHtml}
-            `;
-            
-            if (ship.systems.hull > 0 && !gameState.waitingForTarget && gameState.combatRoundActive && ship.energy > 0 && gameState.currentActionShip === null) {
-                const actionDiv = shipCard.querySelector(`#actions-${ship.id}`);
-                if (actionDiv) {
-                    const actions = ["Атаковать", "Маневр", "Прикрытие", "Обход", "Ремонт", "Спец.умение"];
-                    actions.forEach(act => {
-                        const btn = document.createElement("button");
-                        btn.innerText = act;
-                        btn.className = "action-btn";
-                        btn.onclick = (e) => { e.stopPropagation(); performAction(ship.id, act); };
-                        actionDiv.appendChild(btn);
-                    });
+    // Проверка окончания раунда
+    function checkRoundEnd() {
+        const anyEnergy = game.ships.some(s => s.hull > 0 && s.energy > 0);
+        if (!anyEnergy && !game.waitingTarget) {
+            addLog("⚡ Вся энергия исчерпана! Раунд завершён.");
+            // Восстановление энергии
+            game.ships.forEach(s => {
+                if (s.hull > 0) {
+                    s.energy = s.maxEnergy;
+                    // Восстановление щитов раз в 2 раунда
+                    if (game.round % 2 === 0 && s.shields < s.maxShields) {
+                        s.shields = Math.min(s.maxShields, s.shields + 1);
+                        addLog(`${s.name}: щиты восстановлены до ${s.shields}`);
+                    }
                 }
-            }
-            
-            if (ship.side === "rep") repDiv.appendChild(shipCard);
-            else cisDiv.appendChild(shipCard);
-        });
+                // Сброс временных эффектов
+                s.disabledMove = false;
+                s.underCover = false;
+                s.buffDamage = 0;
+                s.noShootRest = false;
+                if (s.special) s.special.cd = Math.max(0, s.special.cd - 1);
+            });
+            game.round++;
+            game.distance = 6;
+            game.currentShipId = null;
+            game.waitingTarget = null;
+            addLog(`🌌 НАЧАЛСЯ РАУНД ${game.round}. Дистанция сброшена до 6.`);
+            render();
+        }
     }
 
+    // Выбор корабля
     function selectShip(shipId) {
-        if (gameState.currentActionShip) return;
-        const ship = getShipById(shipId);
-        if (!ship || ship.systems.hull <= 0 || ship.energy <= 0) {
-            addLog("Этот корабль не может действовать (уничтожен или нет энергии)");
-            return;
-        }
-        gameState.currentActionShip = shipId;
-        addLog(`Выбран ${ship.name}. Выберите действие в его панели.`);
+        if (game.waitingTarget) { addLog("Сначала завершите текущее действие!"); return; }
+        const ship = getShip(shipId);
+        if (!ship || ship.hull <= 0) { addLog("Корабль уничтожен"); return; }
+        if (ship.energy <= 0) { addLog("Нет энергии для действий!"); return; }
+        game.currentShipId = shipId;
+        addLog(`Выбран ${ship.name}. Выберите действие.`);
         render();
     }
 
-    async function performAction(shipId, action) {
-        if (gameState.waitingForTarget) { addLog("Сначала завершите текущее действие (выберите цель)."); return; }
-        const ship = getShipById(shipId);
-        if (!ship || ship.systems.hull <= 0) { addLog("Корабль уничтожен"); gameState.currentActionShip = null; render(); return; }
-        if (ship.energy <= 0) { addLog(`У ${ship.name} нет энергии!`); gameState.currentActionShip = null; render(); return; }
+    // Обработка действий
+    function performAction(shipId, action) {
+        if (game.waitingTarget) { addLog("Сначала завершите текущее действие"); return; }
+        const ship = getShip(shipId);
+        if (!ship || ship.hull <= 0) return;
+        if (ship.energy <= 0) { addLog("Недостаточно энергии!"); return; }
         
-        // Проверка на поломку систем
-        if (action === "Атаковать" && ship.systems.weapons <= 0) { addLog("Орудия уничтожены, атака невозможна!"); return; }
-        if (action === "Маневр" && ship.systems.engines <= 0) { addLog("Двигатели уничтожены, маневр невозможен!"); return; }
+        // Проверка систем
+        if (action === "Атаковать" && ship.weapons <= 0) { addLog("Орудия уничтожены!"); return; }
+        if (action === "Маневр" && ship.engines <= 0) { addLog("Двигатели уничтожены!"); return; }
         
-        // Снимаем энергию
         ship.energy--;
         
-        // Обработка действий
         switch(action) {
-            case "Атаковать": initiateAttack(ship); break;
+            case "Атаковать": startAttack(ship); break;
             case "Маневр": performManeuver(ship); break;
-            case "Прикрытие": initiateCover(ship); break;
+            case "Прикрытие": startCover(ship); break;
             case "Обход": performFlank(ship); break;
-            case "Ремонт": performRepair(ship); break;
+            case "Ремонт": startRepair(ship); break;
             case "Спец.умение": performSpecial(ship); break;
-            default: addLog("Неизвестное действие");
         }
         
-        gameState.currentActionShip = null;
-        checkRoundEnd();
+        game.currentShipId = null;
+        if (!game.waitingTarget) checkRoundEnd();
         render();
     }
     
-    function initiateAttack(attacker) {
-        addLog(`${attacker.name} готовится атаковать. Выберите вражеский корабль.`);
-        gameState.waitingForTarget = { type: "attack", attacker: attacker.id };
+    function startAttack(attacker) {
+        game.waitingTarget = { type: "attack", attackerId: attacker.id };
+        addLog(`${attacker.name} готов атаковать. Выберите вражеский корабль.`);
         render();
     }
     
     function performManeuver(ship) {
-        let delta = 1;
-        if (ship.class === "легкий") delta = 2;
-        let newDist = gameState.distance - delta;
-        if (newDist < 1) newDist = 1;
-        gameState.distance = newDist;
-        addLog(`${ship.name} выполняет маневр! Дистанция уменьшена до ${gameState.distance} (${ship.class} корабль).`);
+        let delta = (ship.class === "легкий") ? 2 : 1;
+        let newDist = Math.max(1, game.distance - delta);
+        game.distance = newDist;
+        addLog(`${ship.name} маневрирует! Дистанция уменьшена до ${game.distance}.`);
     }
     
     function performFlank(ship) {
-        addLog(`${ship.name} совершает обход, игнорируя прикрытие врага в этом раунде. Атака не производится.`);
-        // применяем бафф: игнорировать cover в этой атаке
         ship.flankActive = true;
+        addLog(`${ship.name} совершает обход, игнорируя прикрытие врага. Атака не производится.`);
     }
     
-    function performRepair(ship) {
-        // восстанавливает 2 единицы одной системы
+    function startRepair(ship) {
+        game.waitingTarget = { type: "repair", attackerId: ship.id };
         addLog(`Выберите систему для ремонта: щиты, орудия, двигатели, корпус`);
-        gameState.waitingForTarget = { type: "repair", attacker: ship.id };
+        render();
+    }
+    
+    function startCover(ship) {
+        game.waitingTarget = { type: "cover", attackerId: ship.id };
+        addLog(`Выберите союзного корабля для прикрытия.`);
         render();
     }
     
     function performSpecial(ship) {
         const spec = ship.special;
-        if (!spec) { addLog("Нет спец.умения!"); return; }
-        if (spec.cd > 0) { addLog(`Спец.умение на перезарядке (${spec.cd} раундов)`); return; }
-        // применить эффект
-        if (spec.effect === "armorPierce") { ship.specialActive = true; addLog(`${ship.name} активирует Пробивной выстрел! +1 урон сквозь щиты`); spec.cd = spec.maxCd; }
-        else if (spec.effect === "allyBuff") { gameState.waitingForTarget = { type: "buffAlly", attacker: ship.id }; return; }
-        else if (spec.effect === "coverAlly") { gameState.waitingForTarget = { type: "coverAlly", attacker: ship.id }; return; }
-        else if (spec.effect === "heavyShot") { ship.heavyShot = true; addLog(`Тяжелый залп активирован! +1 урон, дист.≤3`); spec.cd = spec.maxCd; }
-        else if (spec.effect === "bonusShield") { ship.systems.shields += 2; addLog(`Мандатор получает +2 временных щита!`); spec.cd = spec.maxCd; }
-        else if (spec.effect === "betterRepair") { ship.betterRepair = true; addLog(`Щедрый: следующий ремонт +1 эффективность`); spec.cd = spec.maxCd; }
-        else if (spec.effect === "disableSystem") { gameState.waitingForTarget = { type: "disableSystem", attacker: ship.id }; return; }
-        else if (spec.effect === "doubleShot") { initiateDoubleShot(ship); spec.cd = spec.maxCd; return; }
-        else if (spec.effect === "block") { gameState.waitingForTarget = { type: "blockAlly", attacker: ship.id }; return; }
-        else if (spec.effect === "pushDistance") { gameState.waitingForTarget = { type: "pushDistance", attacker: ship.id }; return; }
-        else { addLog(`Использовано ${spec.name}`); spec.cd = spec.maxCd; }
+        if (!spec) { addLog("Нет спецумения"); return; }
+        if (spec.cd > 0) { addLog(`Спецумение на перезарядке (${spec.cd} раундов)`); return; }
         
-        if (gameState.waitingForTarget === null) afterActionCleanup();
+        switch(spec.effect) {
+            case "pierce": ship.pierceActive = true; addLog(`${ship.name}: следующий выстрел пробивает щиты!`); spec.cd = spec.cdMax; break;
+            case "buffAlly": game.waitingTarget = { type: "buffAlly", attackerId: ship.id }; return;
+            case "cover": game.waitingTarget = { type: "coverAlly", attackerId: ship.id }; return;
+            case "heavyShot": ship.heavyShot = true; addLog(`Тяжелый залп активен! +1 урон, дист.≤3`); break;
+            case "bonusShield": ship.shields = Math.min(ship.maxShields + 2, ship.shields + 2); addLog(`Мандатор получает +2 временных щита!`); spec.cd = spec.cdMax; break;
+            case "betterRepair": ship.betterRepair = true; addLog(`Следующий ремонт эффективнее!`); spec.cd = spec.cdMax; break;
+            case "disable": game.waitingTarget = { type: "disable", attackerId: ship.id }; return;
+            case "doubleShot": startDoubleShot(ship); spec.cd = spec.cdMax; return;
+            case "block": game.waitingTarget = { type: "block", attackerId: ship.id }; return;
+            case "push": game.waitingTarget = { type: "push", attackerId: ship.id }; return;
+        }
+        if (!game.waitingTarget) afterAction();
     }
     
-    // Обработка цели (атака, ремонт и тд)
-    window.selectTarget = function(targetId, targetType, extra) {
-        if (!gameState.waitingForTarget) return;
-        const attacker = getShipById(gameState.waitingForTarget.attacker);
-        if (!attacker) return;
+    function startDoubleShot(ship) {
+        game.waitingTarget = { type: "doubleShot", attackerId: ship.id, shots: 0 };
+        addLog(`Двойной выстрел! Выберите первую цель.`);
+        render();
+    }
+    
+    // Обработка целей
+    function resolveTarget(targetId) {
+        if (!game.waitingTarget) return;
+        const { type, attackerId, shots } = game.waitingTarget;
+        const attacker = getShip(attackerId);
+        if (!attacker) { cancelTarget(); return; }
         
-        if (targetType === "attack") {
-            const defender = getShipById(targetId);
-            if (!defender || defender.side === attacker.side) { addLog("Нельзя атаковать союзника!"); return; }
+        if (type === "attack") {
+            const defender = getShip(targetId);
+            if (!defender || defender.side === attacker.side) { addLog("Нельзя атаковать союзника!"); cancelTarget(); return; }
             resolveAttack(attacker, defender);
+            cancelTarget();
         }
-        else if (targetType === "repair") {
-            let system = targetId; // shields/weapons/engines/hull
-            if (attacker.systems[system] < attacker.maxSystems[system]) {
+        else if (type === "repair") {
+            const system = targetId;
+            if (attacker[system] < attacker[`max${system.charAt(0).toUpperCase() + system.slice(1)}`]) {
                 let amount = attacker.betterRepair ? 3 : 2;
-                attacker.systems[system] = Math.min(attacker.maxSystems[system], attacker.systems[system] + amount);
-                addLog(`${attacker.name} восстанавливает ${system} на ${amount} ед.`);
+                attacker[system] = Math.min(attacker[`max${system.charAt(0).toUpperCase() + system.slice(1)}`], attacker[system] + amount);
+                addLog(`${attacker.name} восстанавливает ${system} на ${amount}.`);
                 attacker.betterRepair = false;
             } else addLog("Система уже восстановлена");
+            cancelTarget();
         }
-        else if (targetType === "buffAlly") {
-            const ally = getShipById(targetId);
-            if (ally && ally.side === attacker.side) { ally.buffDamage = 1; addLog(`${attacker.name} даёт +1 урона союзнику ${ally.name} на 1 раунд`); }
+        else if (type === "cover" || type === "coverAlly") {
+            const ally = getShip(targetId);
+            if (ally && ally.side === attacker.side) { ally.underCover = true; addLog(`${attacker.name} прикрывает ${ally.name}!`); }
+            cancelTarget();
         }
-        else if (targetType === "coverAlly") {
-            const ally = getShipById(targetId);
-            if (ally && ally.side === attacker.side) { ally.underCover = true; addLog(`${attacker.name} прикрывает ${ally.name} (полная защита 1 раунд)`); }
+        else if (type === "buffAlly") {
+            const ally = getShip(targetId);
+            if (ally && ally.side === attacker.side) { ally.buffDamage = (ally.buffDamage || 0) + 1; addLog(`${ally.name} получает +1 к урону!`); }
+            cancelTarget();
         }
-        else if (targetType === "disableSystem") {
-            const enemy = getShipById(targetId);
+        else if (type === "disable") {
+            const enemy = getShip(targetId);
             if (enemy && enemy.side !== attacker.side) {
-                const systems = ["shields","weapons","engines"];
-                const sys = systems[Math.floor(Math.random()*3)];
+                const systems = ["weapons", "engines"];
+                const sys = systems[Math.floor(Math.random() * 2)];
                 enemy.disabledSystem = sys;
-                addLog(`${attacker.name} отключает систему ${sys} у ${enemy.name} на 1 раунд!`);
+                addLog(`${attacker.name} отключает ${sys === "weapons" ? "орудия" : "двигатели"} у ${enemy.name} на 1 раунд!`);
+            }
+            cancelTarget();
+        }
+        else if (type === "doubleShot") {
+            const defender = getShip(targetId);
+            if (!defender || defender.side === attacker.side) { addLog("Неверная цель"); cancelTarget(); return; }
+            resolveAttack(attacker, defender, true);
+            if (!game.waitingTarget) return;
+            if (shots === 0) {
+                game.waitingTarget.shots = 1;
+                addLog(`Первый выстрел выполнен. Выберите вторую цель (или отмените).`);
+                render();
+                return;
+            } else {
+                addLog(`Второй выстрел завершён.`);
+                cancelTarget();
+                attacker.noShootRest = true;
             }
         }
-        else if (targetType === "blockAlly") { /* пассив */ }
-        else if (targetType === "pushDistance") { gameState.distance = Math.min(8, gameState.distance + 2); addLog(`Дистанция увеличена до ${gameState.distance}!`); }
+        else if (type === "block") {
+            const ally = getShip(targetId);
+            if (ally && ally.side === attacker.side) { ally.blockActive = true; addLog(`${ally.name} получает блокировку на 1 раунд!`); }
+            cancelTarget();
+        }
+        else if (type === "push") {
+            game.distance = Math.min(8, game.distance + 2);
+            addLog(`Дистанция увеличена до ${game.distance}!`);
+            cancelTarget();
+        }
         
-        gameState.waitingForTarget = null;
-        afterActionCleanup();
+        afterAction();
         render();
-    };
+    }
     
-    function resolveAttack(attacker, defender) {
-        let damage = attacker.systems.weapons;
-        let bypassShield = attacker.specialActive || false;
-        let distanceBonus = 1;
-        // дистанционные модификаторы
-        if (gameState.distance === 1 && Math.random() < 0.5) damage += 2;
-        if (gameState.distance === 2 && attacker.class === "средний") damage *= 2;
-        if (gameState.distance === 3 && attacker.class === "тяжелый") damage *= 2;
-        if (gameState.distance >= 4 && Math.random() < 0.5) { addLog(`Промах! Дистанция большая.`); return; }
+    function resolveAttack(attacker, defender, isDouble = false) {
+        let damage = attacker.weapons;
         if (attacker.buffDamage) { damage += attacker.buffDamage; attacker.buffDamage = 0; }
-        if (attacker.passiveBonus) damage += attacker.passiveBonus;
+        if (attacker.heavyShot && game.distance <= 3) damage += 1;
+        if (attacker.class === "тяжелый" && game.distance <= 2) damage += 2;
+        if (attacker.class === "средний" && game.distance === 2) damage *= 2;
+        if (game.distance === 1 && Math.random() < 0.5) damage += 2;
+        if (game.distance >= 4 && Math.random() < 0.5) { addLog(`Промах! Дистанция велика.`); return; }
+        
+        // Шанс двойного урона для Аккламатора
+        if (attacker.name === "Аккламатор" && Math.random() < 0.2) { damage *= 2; addLog(`Критический урон! x2`); }
         
         let remaining = damage;
-        if (!bypassShield && defender.systems.shields > 0) {
-            let shieldAbsorb = Math.min(defender.systems.shields, remaining);
-            defender.systems.shields -= shieldAbsorb;
-            remaining -= shieldAbsorb;
-            addLog(`Щиты ${defender.name} поглотили ${shieldAbsorb} урона. Осталось щитов: ${defender.systems.shields}`);
+        if (!attacker.pierceActive && defender.shields > 0) {
+            let absorbed = Math.min(defender.shields, remaining);
+            defender.shields -= absorbed;
+            remaining -= absorbed;
+            addLog(`Щиты ${defender.name} поглотили ${absorbed} урона. Осталось щитов: ${defender.shields}`);
         }
         if (remaining > 0) {
-            defender.systems.hull -= remaining;
-            addLog(`${attacker.name} наносит ${remaining} урона корпусу ${defender.name}. Корпус: ${defender.systems.hull}`);
-            if (defender.systems.hull <= 0) addLog(`💀 ${defender.name} уничтожен!`);
+            defender.hull -= remaining;
+            addLog(`${attacker.name} наносит ${remaining} урона корпусу ${defender.name}. Корпус: ${defender.hull}`);
+            if (defender.hull <= 0) addLog(`💀 ${defender.name} УНИЧТОЖЕН!`);
         }
-        attacker.specialActive = false;
+        attacker.pierceActive = false;
+        attacker.heavyShot = false;
+        
+        if (attacker.name === "Центакс" && game.distance <= 1 && defender.hull > 0) {
+            defender.disabledMove = true;
+            addLog(`${defender.name} не может двигаться в следующем ходу!`);
+        }
     }
     
-    function afterActionCleanup() {
+    function cancelTarget() {
+        game.waitingTarget = null;
         render();
-        checkRoundEnd();
     }
     
-    function checkRoundEnd() {
-        const anyEnergy = gameState.ships.some(s => s.systems.hull > 0 && s.energy > 0);
-        if (!anyEnergy) {
-            addLog("⚡ Энергия всех кораблей исчерпана! Раунд завершён. Восстановление энергии и щитов.");
-            // восстановление энергии, щитов +1 раз в 2 раунда
-            gameState.ships.forEach(ship => {
-                ship.energy = ship.maxEnergy;
-                if (gameState.round % 2 === 0 && ship.systems.shields < ship.maxSystems.shields) ship.systems.shields += 1;
-                // сброс спец. перезарядок
-                if (ship.special) ship.special.cd = Math.max(0, ship.special.cd - 1);
-                ship.underCover = false;
-                ship.flankActive = false;
+    function afterAction() {
+        checkRoundEnd();
+        render();
+    }
+    
+    // Принудительное завершение раунда
+    function forceEndRound() {
+        if (game.waitingTarget) { addLog("Сначала завершите текущее действие"); return; }
+        game.ships.forEach(s => { if (s.hull > 0) s.energy = 0; });
+        checkRoundEnd();
+        render();
+    }
+    
+    // Рендер
+    function render() {
+        document.getElementById("distanceValue").innerText = game.distance;
+        document.getElementById("roundValue").innerText = game.round;
+        
+        const repDiv = document.getElementById("republicShips");
+        const cisDiv = document.getElementById("cisShips");
+        repDiv.innerHTML = "";
+        cisDiv.innerHTML = "";
+        
+        game.ships.forEach(ship => {
+            const card = document.createElement("div");
+            card.className = `ship-card ${game.currentShipId === ship.id ? "active-ship" : ""} ${ship.hull <= 0 ? "disabled-ship" : ""}`;
+            if (ship.hull > 0 && !game.waitingTarget) card.onclick = () => selectShip(ship.id);
+            
+            const systemsHtml = `
+                <div class="systems-grid">
+                    <div class="system ${ship.shields <= 0 ? 'broken' : ''}">🛡️ Щиты:<br>${ship.shields}/${ship.maxShields}</div>
+                    <div class="system ${ship.weapons <= 0 ? 'broken' : ''}">🔫 Орудия:<br>${ship.weapons}/${ship.maxWeapons}</div>
+                    <div class="system ${ship.engines <= 0 ? 'broken' : ''}">⚙️ Двигатели:<br>${ship.engines}/${ship.maxEngines}</div>
+                    <div class="system ${ship.hull <= 0 ? 'broken' : ''}">🏗️ Корпус:<br>${ship.hull}/${ship.maxHull}</div>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size:0.8rem;">
+                    <span>⚡ Энергия: ${ship.energy}/${ship.maxEnergy}</span>
+                    <span>📏 ${ship.class}</span>
+                </div>
+            `;
+            
+            card.innerHTML = `
+                <div class="ship-name">
+                    <span>${ship.name}</span>
+                    <span class="energy-badge">❤️ ${ship.hull > 0 ? "активен" : "УНИЧТОЖЕН"}</span>
+                </div>
+                ${systemsHtml}
+                <div class="action-buttons" id="actions-${ship.id}"></div>
+            `;
+            
+            if (ship.hull > 0 && !game.waitingTarget && game.currentShipId === null && ship.energy > 0) {
+                const actionsDiv = card.querySelector(`#actions-${ship.id}`);
+                if (actionsDiv) {
+                    const acts = ["Атаковать", "Маневр", "Прикрытие", "Обход", "Ремонт", "Спец.умение"];
+                    acts.forEach(act => {
+                        const btn = document.createElement("button");
+                        btn.innerText = act;
+                        btn.className = "action-btn";
+                        btn.onclick = (e) => { e.stopPropagation(); performAction(ship.id, act); };
+                        actionsDiv.appendChild(btn);
+                    });
+                }
+            }
+            
+            if (ship.side === "rep") repDiv.appendChild(card);
+            else cisDiv.appendChild(card);
+        });
+        
+        // Если ожидание цели, подсвечиваем возможные цели
+        if (game.waitingTarget) {
+            document.querySelectorAll(".ship-card").forEach(card => {
+                const nameSpan = card.querySelector(".ship-name span");
+                if (nameSpan) {
+                    const shipName = nameSpan.innerText;
+                    const ship = game.ships.find(s => s.name === shipName);
+                    if (ship && ship.hull > 0) {
+                        const isEnemy = (game.waitingTarget.type === "attack" || game.waitingTarget.type === "disable" || game.waitingTarget.type === "doubleShot") 
+                                    && ship.side !== getShip(game.waitingTarget.attackerId)?.side;
+                        const isAlly = (game.waitingTarget.type === "cover" || game.waitingTarget.type === "coverAlly" || game.waitingTarget.type === "buffAlly" || game.waitingTarget.type === "block")
+                                    && ship.side === getShip(game.waitingTarget.attackerId)?.side;
+                        if (isEnemy || isAlly || game.waitingTarget.type === "repair") {
+                            card.style.cursor = "pointer";
+                            card.style.boxShadow = "0 0 0 2px gold";
+                            card.onclick = () => resolveTarget(ship.id);
+                        }
+                    }
+                }
             });
-            gameState.round++;
-            gameState.distance = 6;
-            gameState.currentActionShip = null;
-            gameState.waitingForTarget = null;
-            render();
         }
     }
     
+    // Инициализация
     function initGame() {
-        gameState.ships = [];
-        let idCounter = 1;
+        game = {
+            distance: 6,
+            round: 1,
+            ships: [],
+            currentShipId: null,
+            waitingTarget: null,
+            logs: [],
+            roundActive: true
+        };
+        
+        let id = 1;
         for (let side of ["rep", "cis"]) {
-            for (let shipName of INIT_FLEET[side]) {
+            for (let shipName of FLEET_COMP[side]) {
                 const data = SHIPS_DATA[shipName];
                 if (data) {
-                    gameState.ships.push({
-                        id: idCounter++,
+                    game.ships.push({
+                        id: id++,
                         name: shipName,
                         side: data.side,
                         class: data.class,
                         maxEnergy: data.maxEnergy,
                         energy: data.maxEnergy,
-                        systems: { ...data.systems },
-                        maxSystems: { ...data.systems },
+                        shields: data.shields,
+                        maxShields: data.shields,
+                        weapons: data.weapons,
+                        maxWeapons: data.weapons,
+                        engines: data.engines,
+                        maxEngines: data.engines,
+                        hull: data.hull,
+                        maxHull: data.hull,
                         special: data.special ? { ...data.special, cd: 0 } : null,
                         passiveDesc: data.passive,
-                        energySpent: 0
+                        // временные эффекты
+                        pierceActive: false,
+                        heavyShot: false,
+                        betterRepair: false,
+                        underCover: false,
+                        flankActive: false,
+                        disabledMove: false,
+                        buffDamage: 0,
+                        noShootRest: false
                     });
                 }
             }
         }
-        gameState.round = 1;
-        gameState.distance = 6;
-        gameState.waitingForTarget = null;
-        gameState.currentActionShip = null;
-        gameState.logs = [];
-        addLog("⚡ БИТВА НАЧАЛАСЬ! Да прибудет с вами Сила. Выберите корабль и действие.");
+        addLog("⭐ БИТВА НАЧАЛАСЬ! Выберите корабль и действуйте. Да пребудет с вами Сила!");
         render();
     }
     
-    // обработка завершения раунда принудительно
-    document.getElementById("skipRoundBtn").onclick = () => {
-        if (gameState.waitingForTarget) { addLog("Сначала завершите текущее действие."); return; }
-        gameState.ships.forEach(s => s.energy = 0);
-        checkRoundEnd();
-        render();
-    };
-    document.getElementById("restartGameBtn").onclick = () => initGame();
-    
-    // Глобальный выбор цели
-    window.selectTarget = function(id, type) { 
-        if (gameState.waitingForTarget) {
-            resolveAttack(getShipById(gameState.waitingForTarget.attacker), getShipById(id));
-            gameState.waitingForTarget = null;
-            afterActionCleanup();
-        }
-    };
+    document.getElementById("endRoundBtn").onclick = forceEndRound;
+    document.getElementById("restartBtn").onclick = initGame;
     
     initGame();
 </script>
