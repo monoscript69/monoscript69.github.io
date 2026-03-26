@@ -3,692 +3,614 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <meta name="description" content="Star Wars: Битва флотов - онлайн пошаговая стратегия">
-    <title>⭐ Star Wars: Битва флотов | Онлайн</title>
-    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+    <title>Дежарик - Голошахматы из Звёздных Войн</title>
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
-        body {
-            background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
-            font-family: 'Segoe UI', 'Orbitron', Arial, sans-serif;
-            padding: 16px;
-            min-height: 100vh;
+        * {
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
         }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: radial-gradient(circle at center, #0a0f1e 0%, #03060c 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Orbitron', 'Courier New', monospace;
+            color: #c0e0ff;
+            padding: 20px;
+        }
+
+        /* Голографический эффект */
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800&display=swap');
+
         .game-container {
-            max-width: 1600px;
-            margin: 0 auto;
-            background: rgba(255,255,255,0.9);
+            background: rgba(10, 20, 30, 0.65);
             backdrop-filter: blur(4px);
             border-radius: 48px;
             padding: 20px;
-            border: 2px solid #2563eb;
-            box-shadow: 0 0 40px rgba(37,99,235,0.2);
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.2), inset 0 0 20px rgba(0, 255, 255, 0.1);
+            border: 1px solid rgba(0, 255, 255, 0.4);
         }
-        .status-bar {
-            display: flex;
-            justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 15px;
-            background: #f1f5f9;
-            padding: 12px 24px;
-            border-radius: 60px;
-            margin-bottom: 25px;
-            border: 1px solid #2563eb;
+
+        .main-panel {
+            text-align: center;
         }
-        .info-card {
-            background: white;
-            padding: 8px 20px;
-            border-radius: 40px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            font-weight: bold;
-            font-size: 1.2rem;
-            color: #1e293b;
-        }
-        .info-value {
-            font-size: 2rem;
+
+        h1 {
+            font-size: 2.2rem;
+            letter-spacing: 4px;
+            text-shadow: 0 0 8px #0af, 0 0 15px #0af;
+            margin: 0 0 10px 0;
             font-weight: 800;
-            color: #2563eb;
-            min-width: 50px;
-            text-align: center;
+            word-break: keep-all;
         }
-        .player-turn {
-            background: #2563eb;
-            color: white;
-            padding: 8px 24px;
-            border-radius: 40px;
-            font-weight: bold;
+
+        .sub {
+            color: #8db9ff;
+            font-size: 0.8rem;
+            margin-bottom: 20px;
+            border-bottom: 1px dashed #2c6e9e;
+            display: inline-block;
+            padding-bottom: 5px;
         }
-        .end-round-btn {
-            background: #dc2626;
-            border: none;
-            padding: 8px 28px;
-            border-radius: 40px;
-            color: white;
-            font-weight: bold;
-            cursor: pointer;
-        }
-        .fleets {
+
+        /* Игровая доска - голографическая сетка */
+        .board {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 24px;
-            margin-bottom: 25px;
-        }
-        .fleet {
-            background: white;
-            border-radius: 32px;
+            grid-template-columns: repeat(4, minmax(70px, 95px));
+            gap: 12px;
+            justify-content: center;
+            margin: 20px auto;
+            background: rgba(0, 0, 0, 0.5);
             padding: 20px;
-            border-top: 4px solid;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
-        }
-        .fleet-republic { border-top-color: #3b82f6; background: linear-gradient(135deg,#eff6ff,#dbeafe); }
-        .fleet-cis { border-top-color: #ef4444; background: linear-gradient(135deg,#fff5f5,#fee2e2); }
-        .fleet-title {
-            font-size: 1.6rem;
-            text-align: center;
-            margin-bottom: 20px;
-            font-weight: bold;
-        }
-        .fleet-republic .fleet-title { color: #1e40af; }
-        .fleet-cis .fleet-title { color: #b91c1c; }
-        .ships-grid {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-        .ship-card {
-            background: white;
-            border-radius: 24px;
-            padding: 14px;
-            border-left: 5px solid;
-            transition: 0.2s;
-            cursor: pointer;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-        }
-        .fleet-republic .ship-card { border-left-color: #3b82f6; }
-        .fleet-cis .ship-card { border-left-color: #ef4444; }
-        .ship-card.active-ship {
-            background: #fef9c3;
-            box-shadow: 0 0 0 2px #eab308;
-            transform: scale(1.02);
-        }
-        .ship-card.disabled-ship { opacity: 0.6; filter: grayscale(0.2); }
-        .ship-name {
-            font-size: 1.2rem;
-            font-weight: bold;
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 8px;
-            color: #1e293b;
-        }
-        .energy-badge {
-            background: #e2e8f0;
-            padding: 2px 12px;
-            border-radius: 20px;
-            font-size: 0.8rem;
-        }
-        .systems-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 6px;
-            margin: 10px 0;
-            font-size: 0.7rem;
-        }
-        .system {
-            background: #f8fafc;
-            padding: 4px;
-            border-radius: 10px;
-            text-align: center;
-        }
-        .system.broken { background: #fee2e2; text-decoration: line-through; color: #991b1b; }
-        .position {
-            background: #e2e8f0;
-            padding: 4px 8px;
-            border-radius: 20px;
-            text-align: center;
-            font-size: 0.8rem;
-            font-weight: bold;
-            margin-top: 8px;
-        }
-        .action-buttons {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-            margin-top: 10px;
-        }
-        .action-btn {
-            background: #e2e8f0;
-            border: none;
-            padding: 5px 10px;
-            border-radius: 20px;
-            cursor: pointer;
-            font-size: 0.7rem;
-            font-weight: 500;
-        }
-        .action-btn:active { transform: scale(0.95); background: #cbd5e1; }
-        .combat-log {
-            background: #f1f5f9;
-            border-radius: 28px;
-            padding: 15px;
-            height: 180px;
-            overflow-y: auto;
-            font-family: monospace;
-            font-size: 0.8rem;
-            margin-top: 20px;
-            border: 1px solid #cbd5e1;
-        }
-        .online-panel {
-            background: #eef2ff;
             border-radius: 32px;
-            padding: 16px;
-            margin-bottom: 20px;
+            box-shadow: 0 0 20px rgba(0, 180, 200, 0.3);
+        }
+
+        .cell {
+            aspect-ratio: 1 / 1;
+            background: linear-gradient(145deg, #101c2a, #07121c);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.6rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 5px 0 #031018;
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            text-shadow: 0 0 5px currentColor;
+        }
+
+        .cell.empty {
+            background: #05121e;
+            box-shadow: inset 0 0 8px #0af2, 0 2px 5px black;
+            cursor: pointer;
+        }
+
+        .cell:active {
+            transform: scale(0.96);
+        }
+
+        /* Фигуры: голографические стили */
+        .cell[data-piece="A"] { color: #4affff; text-shadow: 0 0 8px cyan; }
+        .cell[data-piece="D"] { color: #ffaa66; text-shadow: 0 0 8px orange; }
+        .cell[data-piece="K"] { color: #ff66cc; text-shadow: 0 0 8px #f6f; }
+        .cell[data-piece="S"] { color: #88ff88; text-shadow: 0 0 6px #8f8; }
+
+        .turn-indicator {
+            font-size: 1.3rem;
+            background: #07161fcc;
+            display: inline-block;
+            padding: 8px 18px;
+            border-radius: 60px;
+            margin: 10px auto;
+            backdrop-filter: blur(4px);
+            border: 1px solid cyan;
+        }
+
+        .status {
+            font-size: 1rem;
+            margin: 12px;
+            min-height: 60px;
+            background: #00000066;
+            padding: 8px;
+            border-radius: 28px;
+        }
+
+        button {
+            background: #0f212e;
+            border: 1px solid #2fa;
+            color: #b3ffff;
+            font-family: 'Orbitron', monospace;
+            font-weight: bold;
+            padding: 8px 20px;
+            margin: 8px;
+            border-radius: 40px;
+            cursor: pointer;
+            transition: 0.1s linear;
+            font-size: 0.9rem;
+        }
+
+        button:hover {
+            background: #1d4b5e;
+            box-shadow: 0 0 8px cyan;
+            transform: scale(1.01);
+        }
+
+        .online-panel {
+            margin-top: 15px;
+            background: #030c14aa;
+            border-radius: 30px;
+            padding: 12px;
+            font-size: 0.8rem;
+        }
+
+        input {
+            background: #0e1a24;
+            border: 1px solid #2fa;
+            color: #cff;
+            padding: 6px 12px;
+            border-radius: 28px;
+            font-family: monospace;
+            margin: 5px;
+            width: 160px;
+        }
+
+        .flex-row {
             display: flex;
             flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
             align-items: center;
-            justify-content: space-between;
-            gap: 12px;
         }
-        .online-panel input, .online-panel button {
-            padding: 8px 16px;
-            border-radius: 40px;
-            border: 1px solid #3b82f6;
-            background: white;
-            font-family: inherit;
+
+        @media (max-width: 480px) {
+            .board {
+                grid-template-columns: repeat(4, minmax(65px, 75px));
+                gap: 8px;
+            }
+            .cell {
+                font-size: 2rem;
+            }
+            h1 { font-size: 1.5rem; }
         }
-        .online-panel button {
-            background: #3b82f6;
-            color: white;
-            cursor: pointer;
-            border: none;
+        
+        .highlight {
+            box-shadow: 0 0 0 3px #0ff, 0 0 0 6px #0ff4;
+            transition: 0.05s;
         }
-        .restart-btn {
-            background: #2563eb;
-            border: none;
-            padding: 10px 32px;
-            border-radius: 40px;
-            font-weight: bold;
-            font-size: 1rem;
-            margin-top: 15px;
-            cursor: pointer;
-            color: white;
-        }
-        @media (max-width: 900px) {
-            .fleets { grid-template-columns: 1fr; }
-            .systems-grid { grid-template-columns: repeat(2, 1fr); }
+        
+        footer {
+            font-size: 0.65rem;
+            margin-top: 12px;
+            opacity: 0.7;
         }
     </style>
 </head>
 <body>
 <div class="game-container">
-    <div class="online-panel" id="onlinePanel">
-        <div>
-            <button id="createRoomBtn">✨ Создать комнату</button>
-            <span id="roomIdDisplay" style="margin-left: 12px;"></span>
-        </div>
-        <div>
-            <input type="text" id="joinRoomInput" placeholder="ID комнаты">
-            <button id="joinRoomBtn">🔗 Присоединиться</button>
-        </div>
-        <div id="connectionStatus" style="color: #2563eb; font-weight: bold;"></div>
-    </div>
+    <div class="main-panel">
+        <h1>✦ ДЕЖАРИК ✦</h1>
+        <div class="sub">ГОЛОШАХМАТЫ • ТАКТИЧЕСКАЯ ДУЭЛЬ</div>
 
-    <div class="status-bar">
-        <div class="info-card">🌌 ДИСТАНЦИЯ (по позициям)</div>
-        <div class="info-card">⚡ РАУНД: <span class="info-value" id="roundValue">1</span></div>
-        <div class="player-turn" id="turnIndicator">Ход: Республика</div>
-        <button class="end-round-btn" id="endRoundBtn">⏭️ ЗАВЕРШИТЬ РАУНД</button>
-    </div>
+        <div class="board" id="board"></div>
 
-    <div class="fleets">
-        <div class="fleet fleet-republic">
-            <div class="fleet-title">✨ ГАЛАКТИЧЕСКАЯ РЕСПУБЛИКА ✨<br><span style="font-size:0.9rem;">Игрок 1</span></div>
-            <div id="republicShips" class="ships-grid"></div>
-        </div>
-        <div class="fleet fleet-cis">
-            <div class="fleet-title">⚙️ КОНФЕДЕРАЦИЯ НЕЗАВИСИМЫХ СИСТЕМ ⚙️<br><span style="font-size:0.9rem;">Игрок 2</span></div>
-            <div id="cisShips" class="ships-grid"></div>
-        </div>
-    </div>
+        <div class="turn-indicator" id="turnText">Ход: СВЕТЛАЯ СТОРОНА</div>
+        <div class="status" id="statusMsg">Выбери фигуру и клетку для перемещения</div>
 
-    <div class="combat-log" id="combatLog"></div>
-    <div style="display: flex; justify-content: center; margin-top: 15px;">
-        <button class="restart-btn" id="restartBtn">🔄 НОВАЯ БИТВА (локально)</button>
+        <div class="flex-row">
+            <button id="resetBtn">⟳ НОВАЯ ИГРА</button>
+            <button id="copyRoomBtn">📋 КОПИРОВАТЬ ID КОМНАТЫ</button>
+        </div>
+
+        <!-- Панель онлайн-матча Firebase -->
+        <div class="online-panel">
+            <div class="flex-row">
+                <input type="text" id="roomIdInput" placeholder="ID комнаты (матча)" value="dejarik_arena">
+                <button id="joinRoomBtn">🔗 ПОДКЛЮЧИТЬСЯ</button>
+                <button id="createRoomBtn">✨ СОЗДАТЬ / ОБНОВИТЬ</button>
+            </div>
+            <div id="onlineStatus" style="font-size:0.75rem; margin-top:6px;">⚡ Офлайн режим. Введите ID и нажмите "Подключиться"</div>
+        </div>
+        <footer>Правила: A — Атакующий воин, D — Защитник, K — Командир (Король), S — Стратег. Ходьба на 1 клетку в любую сторону (вкл. диагональ). Победа: захват вражеского K или блок.</footer>
     </div>
 </div>
 
 <script>
-    // ==================== ДАННЫЕ КОРАБЛЕЙ (без изменений) ====================
-    const SHIPS_DATA = {
-        "Арквитенс": { side: "rep", class: "легкий", maxEnergy: 4, shields: 3, weapons: 3, engines: 4, hull: 6,
-            special: { name: "Пробивной выстрел", cd: 0, cdMax: 1, effect: "pierce" } },
-        "Аккламатор": { side: "rep", class: "легкий", maxEnergy: 3, shields: 4, weapons: 4, engines: 4, hull: 8,
-            special: { name: "Тактическая поддержка", cd: 0, cdMax: 1, effect: "buffAlly" } },
-        "Венатор": { side: "rep", class: "средний", maxEnergy: 2, shields: 5, weapons: 5, engines: 4, hull: 10,
-            special: { name: "Прикрытие", cd: 0, cdMax: 2, effect: "cover" } },
-        "Центакс": { side: "rep", class: "средний", maxEnergy: 2, shields: 4, weapons: 6, engines: 5, hull: 11,
-            special: { name: "Тяжелый залп", cd: 0, cdMax: 0, effect: "heavyShot" } },
-        "Мандатор": { side: "rep", class: "тяжелый", maxEnergy: 2, shields: 5, weapons: 9, engines: 7, hull: 17,
-            special: { name: "Доп. щиты", cd: 0, cdMax: 3, effect: "bonusShield" } },
-        "Щедрый": { side: "cis", class: "легкий", maxEnergy: 3, shields: 4, weapons: 4, engines: 3, hull: 8,
-            special: { name: "Продвинутый ремонт", cd: 0, cdMax: 1, effect: "betterRepair" } },
-        "Провидение": { side: "cis", class: "средний", maxEnergy: 2, shields: 5, weapons: 5, engines: 4, hull: 10,
-            special: { name: "Системная атака", cd: 0, cdMax: 2, effect: "disable" } },
-        "Бунтарь": { side: "cis", class: "средний", maxEnergy: 2, shields: 3, weapons: 6, engines: 4, hull: 11,
-            special: { name: "Двойной выстрел", cd: 0, cdMax: 1, effect: "doubleShot" } },
-        "Барышник": { side: "cis", class: "тяжелый", maxEnergy: 2, shields: 4, weapons: 6, engines: 5, hull: 14,
-            special: { name: "Блокировка", cd: 0, cdMax: 2, effect: "block" } },
-        "Покоритель": { side: "cis", class: "тяжелый", maxEnergy: 2, shields: 5, weapons: 5, engines: 6, hull: 16,
-            special: { name: "Гравитационный толчок", cd: 0, cdMax: 1, effect: "push" } }
+    // ---------- ИНИЦИАЛИЗАЦИЯ FIREBASE (конфиг для демо, замените на свой проект) ----------
+    // ВАЖНО: для работы на GitHub Pages создайте свой проект Firebase и вставьте config ниже.
+    // Этот конфиг - публичный шаблон, но для реального матча нужно создать свой проект.
+    const firebaseConfig = {
+      apiKey: "AIzaSyAsRBBDmrstBWTjO87bb2eTTOhxtNMUgeo",
+      authDomain: "djarikswrp.firebaseapp.com",
+      projectId: "djarikswrp",
+      storageBucket: "djarikswrp.firebasestorage.app",
+      messagingSenderId: "954182063669",
+      appId: "1:954182063669:web:9c052d63f478bc6b5c837c",
+      measurementId: "G-JGWPY9RF90"
     };
-
-    const FLEET_COMP = {
-        rep: ["Арквитенс", "Аккламатор", "Венатор", "Центакс", "Мандатор"],
-        cis: ["Щедрый", "Провидение", "Бунтарь", "Барышник", "Покоритель"]
-    };
-
-    // ------------------- Глобальные переменные -------------------
-    let game = null;
-    let peer = null;
-    let conn = null;
-    let isHost = false;
-    let roomId = null;
-
-    // ------------------- Инициализация игры (локальная) -------------------
-    function initGameLocal() {
-        game = {
-            distance: 6, // не используется, оставлен для совместимости, теперь дистанция считается по позициям
-            round: 1,
-            ships: [],
-            currentShipId: null,
-            waitingTarget: null,
-            logs: [],
-            currentPlayer: "rep",
-            gameMode: "local"
-        };
-        let id = 1;
-        for (let side of ["rep", "cis"]) {
-            for (let shipName of FLEET_COMP[side]) {
-                const data = SHIPS_DATA[shipName];
-                if (data) {
-                    // случайная начальная позиция от 1 до 4
-                    const startPos = Math.floor(Math.random() * 4) + 1;
-                    game.ships.push({
-                        id: id++,
-                        name: shipName,
-                        side: data.side,
-                        class: data.class,
-                        maxEnergy: data.maxEnergy,
-                        energy: data.maxEnergy,
-                        shields: data.shields,
-                        maxShields: data.shields,
-                        weapons: data.weapons,
-                        maxWeapons: data.weapons,
-                        engines: data.engines,
-                        maxEngines: data.engines,
-                        hull: data.hull,
-                        maxHull: data.hull,
-                        position: startPos,
-                        special: data.special ? { ...data.special, cd: 0 } : null,
-                        pierceActive: false,
-                        heavyShot: false,
-                        betterRepair: false,
-                        underCover: false,
-                        flankActive: false,
-                        disabledMove: false,
-                        buffDamage: 0,
-                        noShootRest: false
-                    });
-                }
+    
+    // Инициализация Firebase (если конфиг валидный, иначе работаем офлайн)
+    let firebaseApp = null;
+    let database = null;
+    let firebaseAvailable = false;
+    let currentRoomId = "dejarik_arena";
+    let isSyncing = false;      // флаг, чтобы не зацикливать обновления
+    let localPlayerColor = null; // "light" или "dark"
+    let myTurnFlag = false;
+    
+    try {
+        if (firebaseConfig.apiKey !== "AIzaSyDummyFirebaseKeyReplaceWithYourOwn") {
+            firebaseApp = firebase.initializeApp(firebaseConfig);
+            database = firebase.database();
+            firebaseAvailable = true;
+            console.log("🔥 Firebase подключена");
+        } else {
+            console.warn("⚠️ Используется демо-конфиг Firebase. Для онлайн-игры создайте свой проект и вставьте ключи.");
+            document.getElementById("onlineStatus").innerHTML = "⚠️ Firebase не настроен. Для онлайн-матчей замените firebaseConfig в коде.";
+        }
+    } catch(e) {
+        console.error("Firebase error:", e);
+        firebaseAvailable = false;
+        document.getElementById("onlineStatus").innerHTML = "❌ Ошибка Firebase. Игра офлайн.";
+    }
+    
+    // ---------- ИГРОВАЯ ЛОГИКА ДЕЖАРИК ----------
+    // Фигуры: A, D, K, S. Игроки: light (светлая) и dark (темная)
+    // Начальная расстановка: классическая голошахматная
+    // 4x4 доска: индексы 0..3 строки, 0..3 колонки.
+    // light (верх) - ряд 0 и 1? пусть светлые внизу для удобства интерфейса, но стандарт: пусть light - нижний ряд (строка 3) и 2, dark верх (0,1)
+    // Однако для наглядности: dark (зло) сверху, light (добро) снизу.
+    // Row0: dark фигуры: [A, D, K, S]  Row1: dark пешки? нет, голошахматы все фигуры уникальны.
+    // В каноне: 4 фигуры на сторону. Назначаем:
+    // Dark (верх): (0,0)=A, (0,1)=D, (0,2)=K, (0,3)=S.
+    // Light (низ):  (3,0)=A, (3,1)=D, (3,2)=K, (3,3)=S.
+    // Остальные клетки пустые.
+    
+    let boardData = Array(4).fill().map(() => Array(4).fill(null));
+    let currentTurn = "light"; // light ходит первым (светлая сторона)
+    let gameOver = false;
+    let winner = null;
+    let selectedRow = null, selectedCol = null;
+    
+    function initBoard() {
+        // очищаем
+        for(let i=0;i<4;i++){
+            for(let j=0;j<4;j++){
+                boardData[i][j] = null;
             }
         }
-        addLogLocal("⭐ Локальная игра начата! Используйте маневр для перемещения по полю (1-4).");
-        renderLocal();
+        // dark (верх)
+        boardData[0][0] = { type: "A", owner: "dark" };
+        boardData[0][1] = { type: "D", owner: "dark" };
+        boardData[0][2] = { type: "K", owner: "dark" };
+        boardData[0][3] = { type: "S", owner: "dark" };
+        // light (низ)
+        boardData[3][0] = { type: "A", owner: "light" };
+        boardData[3][1] = { type: "D", owner: "light" };
+        boardData[3][2] = { type: "K", owner: "light" };
+        boardData[3][3] = { type: "S", owner: "light" };
+        currentTurn = "light";
+        gameOver = false;
+        winner = null;
+        selectedRow = null;
+        selectedCol = null;
+        myTurnFlag = (localPlayerColor === currentTurn);
     }
-
-    function addLogLocal(msg) {
-        if (!game) return;
-        game.logs.unshift(`[Раунд ${game.round}] ${msg}`);
-        if (game.logs.length > 25) game.logs.pop();
-        const logDiv = document.getElementById("combatLog");
-        if (logDiv) logDiv.innerHTML = game.logs.map(l => `📟 ${l}`).join("<br>");
+    
+    // Проверка хода (короля)
+    function isKing(piece) { return piece && piece.type === "K"; }
+    
+    // Проверка допустимого перемещения (на одну клетку в любом направлении, включая диагональ)
+    function isValidMove(row, col, targetRow, targetCol, piece) {
+        const dRow = Math.abs(targetRow - row);
+        const dCol = Math.abs(targetCol - col);
+        return (dRow <= 1 && dCol <= 1 && !(dRow === 0 && dCol === 0));
     }
-
-    // ---------- РАСЧЁТ ДИСТАНЦИИ МЕЖДУ КОРАБЛЯМИ ----------
-    function getDistance(attacker, defender) {
-        return Math.abs(attacker.position - defender.position);
+    
+    // Проверка, есть ли у игрока король на доске
+    function hasKing(owner) {
+        for(let i=0;i<4;i++)
+            for(let j=0;j<4;j++)
+                if(boardData[i][j] && boardData[i][j].owner === owner && boardData[i][j].type === "K")
+                    return true;
+        return false;
     }
-
-    // ---------- МОДИФИЦИРОВАННАЯ АТАКА С УЧЁТОМ ПОЗИЦИЙ ----------
-    function resolveAttack(attacker, defender) {
-        const dist = getDistance(attacker, defender);
-        let damage = attacker.weapons;
-        if (attacker.buffDamage) { damage += attacker.buffDamage; attacker.buffDamage = 0; }
-        if (attacker.heavyShot && dist <= 3) damage += 1;
-        if (attacker.class === "тяжелый" && dist <= 2) damage += 2;
-        if (attacker.class === "средний" && dist === 2) damage *= 2;
-        if (dist === 1 && Math.random() < 0.5) damage += 2;
-        if (dist >= 4 && Math.random() < 0.5) { addLogLocal(`Промах! Дистанция ${dist} велика.`); return; }
-        if (attacker.name === "Аккламатор" && Math.random() < 0.2) { damage *= 2; addLogLocal(`Критический урон! x2`); }
-
-        let remaining = damage;
-        if (!attacker.pierceActive && defender.shields > 0) {
-            let absorbed = Math.min(defender.shields, remaining);
-            defender.shields -= absorbed;
-            remaining -= absorbed;
-            addLogLocal(`Щиты ${defender.name} поглотили ${absorbed} урона. Осталось щитов: ${defender.shields}`);
+    
+    // Проверка победы после хода
+    function checkGameOver() {
+        if(!hasKing("light")) {
+            gameOver = true;
+            winner = "dark";
+            return true;
         }
-        if (remaining > 0) {
-            defender.hull -= remaining;
-            addLogLocal(`${attacker.name} наносит ${remaining} урона корпусу ${defender.name}. Корпус: ${defender.hull}`);
-            if (defender.hull <= 0) addLogLocal(`💀 ${defender.name} УНИЧТОЖЕН!`);
+        if(!hasKing("dark")) {
+            gameOver = true;
+            winner = "light";
+            return true;
         }
-        attacker.pierceActive = false;
-        attacker.heavyShot = false;
-
-        if (attacker.name === "Центакс" && dist <= 1 && defender.hull > 0) {
-            defender.disabledMove = true;
-            addLogLocal(`${defender.name} не может двигаться в следующем ходу!`);
-        }
+        return false;
     }
-
-    // ---------- МАНЁВР: ПЕРЕМЕЩЕНИЕ КОРАБЛЯ НА 1 (ЛЁГКИЕ НА 2) ----------
-    function performManeuver(ship) {
-        let maxShift = (ship.class === "легкий") ? 2 : 1;
-        // Выбор направления (влево/вправо) – упрощённо: игрок выбирает через окно prompt
-        let direction = prompt(`Выберите направление для ${ship.name} (текущая позиция ${ship.position}):\nВведите 1 (влево) или 2 (вправо)`, "1");
-        if (direction !== "1" && direction !== "2") return;
-        let delta = (direction === "1") ? -maxShift : maxShift;
-        let newPos = ship.position + delta;
-        if (newPos < 1) newPos = 1;
-        if (newPos > 4) newPos = 4;
-        if (newPos === ship.position) {
-            addLogLocal("Не удалось переместиться (граница поля)");
+    
+    // Попытка совершить ход
+    function tryMove(fromRow, fromCol, toRow, toCol) {
+        const piece = boardData[fromRow][fromCol];
+        if(!piece) return false;
+        if(piece.owner !== currentTurn) return false;
+        const targetPiece = boardData[toRow][toCol];
+        if(targetPiece && targetPiece.owner === currentTurn) return false;
+        if(!isValidMove(fromRow, fromCol, toRow, toCol, piece)) return false;
+        
+        // выполняем перемещение
+        boardData[toRow][toCol] = piece;
+        boardData[fromRow][fromCol] = null;
+        
+        // смена хода
+        currentTurn = (currentTurn === "light") ? "dark" : "light";
+        const gameEnd = checkGameOver();
+        return true;
+    }
+    
+    // Сброс выделения
+    function clearSelected() {
+        selectedRow = null;
+        selectedCol = null;
+    }
+    
+    // ------ Отрисовка доски -----
+    const boardEl = document.getElementById("board");
+    const turnTextEl = document.getElementById("turnText");
+    const statusMsgEl = document.getElementById("statusMsg");
+    
+    function renderBoard() {
+        boardEl.innerHTML = "";
+        for(let i=0;i<4;i++){
+            for(let j=0;j<4;j++){
+                const cell = document.createElement("div");
+                cell.className = "cell";
+                const piece = boardData[i][j];
+                let symbol = "";
+                let pieceType = "";
+                if(piece){
+                    // символы для голо-стиля
+                    switch(piece.type){
+                        case "A": symbol = "⚔️"; pieceType = "A"; break;
+                        case "D": symbol = "🛡️"; pieceType = "D"; break;
+                        case "K": symbol = "👑"; pieceType = "K"; break;
+                        case "S": symbol = "🌀"; pieceType = "S"; break;
+                        default: symbol = "?";
+                    }
+                    cell.textContent = symbol;
+                    cell.setAttribute("data-piece", pieceType);
+                    cell.style.color = piece.owner === "light" ? "#aaffdd" : "#ffaa77";
+                } else {
+                    cell.textContent = "◌";
+                    cell.setAttribute("data-piece", "empty");
+                    cell.classList.add("empty");
+                }
+                if(selectedRow === i && selectedCol === j){
+                    cell.classList.add("highlight");
+                }
+                cell.addEventListener("click", (function(row,col){
+                    return function(){ onCellClick(row,col); };
+                })(i,j));
+                boardEl.appendChild(cell);
+            }
+        }
+        // Обновление текста хода
+        if(gameOver){
+            let winnerName = winner === "light" ? "СВЕТЛАЯ СТОРОНА" : "ТЁМНАЯ СТОРОНА";
+            turnTextEl.textContent = `🏆 ПОБЕДА: ${winnerName} 🏆`;
+            statusMsgEl.innerText = winner === "light" ? "Светлые одержали верх! Сила в единстве." : "Тьма поглощает всё...";
+        } else {
+            turnTextEl.textContent = `ХОД: ${currentTurn === "light" ? "СВЕТЛАЯ СТОРОНА" : "ТЁМНАЯ СТОРОНА"}`;
+            let hint = selectedRow !== null ? " → выбери клетку для перемещения" : " выбери фигуру";
+            statusMsgEl.innerText = (currentTurn === localPlayerColor && !gameOver && firebaseAvailable && localPlayerColor) ? 
+                `⚡ Ваш ход! ${hint}` : (gameOver ? "Игра завершена" : `Ожидание хода соперника...`);
+            if(!firebaseAvailable || !localPlayerColor) statusMsgEl.innerText = `Кликни по фигуре${selectedRow !== null ? ", затем по клетке" : ""}`;
+        }
+        // дополнительная подсказка
+        if(gameOver) statusMsgEl.innerText = `Игра окончена. Нажмите "НОВАЯ ИГРА"`;
+    }
+    
+    // Обработка клика
+    function onCellClick(row, col){
+        if(gameOver) {
+            statusMsgEl.innerText = "Игра завершена, начните новую";
             return;
         }
-        ship.position = newPos;
-        addLogLocal(`${ship.name} переместился на позицию ${ship.position} (изменение: ${delta})`);
-    }
-
-    // ---------- ОБРАБОТКА ДЕЙСТВИЙ (локальная) ----------
-    function performActionLocal(shipId, action) {
-        if (game.waitingTarget) { addLogLocal("Сначала завершите текущее действие"); return; }
-        const ship = getShipLocal(shipId);
-        if (!ship || ship.hull <= 0) return;
-        if (ship.energy <= 0) { addLogLocal("Недостаточно энергии!"); return; }
-        if (action === "Атаковать" && ship.weapons <= 0) { addLogLocal("Орудия уничтожены!"); return; }
-        if (action === "Маневр" && ship.engines <= 0) { addLogLocal("Двигатели уничтожены!"); return; }
-        ship.energy--;
-
-        switch(action) {
-            case "Атаковать": startAttackLocal(ship); break;
-            case "Маневр": performManeuver(ship); break;
-            case "Прикрытие": startCoverLocal(ship); break;
-            case "Обход": performFlankLocal(ship); break;
-            case "Ремонт": startRepairLocal(ship); break;
-            case "Спец.умение": performSpecialLocal(ship); break;
+        // Онлайн-синхронизация: если есть комната и локальный игрок не тот, чей ход или не назначена роль
+        if(firebaseAvailable && localPlayerColor && localPlayerColor !== currentTurn) {
+            statusMsgEl.innerText = "Сейчас ход соперника, ждите...";
+            return;
         }
-        game.currentShipId = null;
-        if (!game.waitingTarget) checkRoundEndLocal();
-        renderLocal();
-    }
-
-    function startAttackLocal(attacker) {
-        game.waitingTarget = { type: "attack", attackerId: attacker.id };
-        addLogLocal(`${attacker.name} готов атаковать. Выберите вражеский корабль.`);
-        renderLocal();
-    }
-    function startCoverLocal(ship) {
-        game.waitingTarget = { type: "cover", attackerId: ship.id };
-        addLogLocal(`Выберите союзного корабля для прикрытия.`);
-        renderLocal();
-    }
-    function performFlankLocal(ship) {
-        ship.flankActive = true;
-        addLogLocal(`${ship.name} совершает обход, игнорируя прикрытие врага.`);
-    }
-    function startRepairLocal(ship) {
-        game.waitingTarget = { type: "repair", attackerId: ship.id };
-        addLogLocal(`Выберите систему для ремонта: shields, weapons, engines, hull`);
-        renderLocal();
-    }
-    function performSpecialLocal(ship) {
-        const spec = ship.special;
-        if (!spec) { addLogLocal("Нет спецумения"); return; }
-        if (spec.cd > 0) { addLogLocal(`Спецумение на перезарядке (${spec.cd} раундов)`); return; }
-        switch(spec.effect) {
-            case "pierce": ship.pierceActive = true; addLogLocal(`${ship.name}: следующий выстрел пробивает щиты!`); spec.cd = spec.cdMax; break;
-            case "buffAlly": game.waitingTarget = { type: "buffAlly", attackerId: ship.id }; return;
-            case "cover": game.waitingTarget = { type: "coverAlly", attackerId: ship.id }; return;
-            case "heavyShot": ship.heavyShot = true; addLogLocal(`Тяжелый залп активен! +1 урон`); break;
-            case "bonusShield": ship.shields = Math.min(ship.maxShields + 2, ship.shields + 2); addLogLocal(`Мандатор получает +2 щита!`); spec.cd = spec.cdMax; break;
-            case "betterRepair": ship.betterRepair = true; addLogLocal(`Следующий ремонт эффективнее!`); spec.cd = spec.cdMax; break;
-            case "disable": game.waitingTarget = { type: "disable", attackerId: ship.id }; return;
-            case "doubleShot": startDoubleShotLocal(ship); spec.cd = spec.cdMax; return;
-            case "block": game.waitingTarget = { type: "block", attackerId: ship.id }; return;
-            case "push": game.waitingTarget = { type: "push", attackerId: ship.id }; return;
-        }
-        if (!game.waitingTarget) afterActionLocal();
-    }
-    function startDoubleShotLocal(ship) {
-        game.waitingTarget = { type: "doubleShot", attackerId: ship.id, shots: 0 };
-        addLogLocal(`Двойной выстрел! Выберите первую цель.`);
-        renderLocal();
-    }
-    function resolveTargetLocal(targetId) {
-        if (!game.waitingTarget) return;
-        const { type, attackerId, shots } = game.waitingTarget;
-        const attacker = getShipLocal(attackerId);
-        if (!attacker) { cancelTargetLocal(); return; }
-
-        if (type === "attack") {
-            const defender = getShipLocal(targetId);
-            if (!defender || defender.side === attacker.side) { addLogLocal("Нельзя атаковать союзника!"); cancelTargetLocal(); return; }
-            resolveAttack(attacker, defender);
-            cancelTargetLocal();
-        }
-        else if (type === "repair") {
-            const system = targetId;
-            const maxKey = `max${system.charAt(0).toUpperCase() + system.slice(1)}`;
-            if (attacker[system] < attacker[maxKey]) {
-                let amount = attacker.betterRepair ? 3 : 2;
-                attacker[system] = Math.min(attacker[maxKey], attacker[system] + amount);
-                addLogLocal(`${attacker.name} восстанавливает ${system} на ${amount}.`);
-                attacker.betterRepair = false;
-            } else addLogLocal("Система уже восстановлена");
-            cancelTargetLocal();
-        }
-        else if (type === "cover" || type === "coverAlly") {
-            const ally = getShipLocal(targetId);
-            if (ally && ally.side === attacker.side) { ally.underCover = true; addLogLocal(`${attacker.name} прикрывает ${ally.name}!`); }
-            cancelTargetLocal();
-        }
-        else if (type === "buffAlly") {
-            const ally = getShipLocal(targetId);
-            if (ally && ally.side === attacker.side) { ally.buffDamage = (ally.buffDamage || 0) + 1; addLogLocal(`${ally.name} получает +1 к урону!`); }
-            cancelTargetLocal();
-        }
-        else if (type === "disable") {
-            const enemy = getShipLocal(targetId);
-            if (enemy && enemy.side !== attacker.side) {
-                const systems = ["weapons", "engines"];
-                const sys = systems[Math.floor(Math.random() * 2)];
-                enemy.disabledSystem = sys;
-                addLogLocal(`${attacker.name} отключает ${sys === "weapons" ? "орудия" : "двигатели"} у ${enemy.name} на 1 раунд!`);
-            }
-            cancelTargetLocal();
-        }
-        else if (type === "doubleShot") {
-            const defender = getShipLocal(targetId);
-            if (!defender || defender.side === attacker.side) { addLogLocal("Неверная цель"); cancelTargetLocal(); return; }
-            resolveAttack(attacker, defender);
-            if (shots === 0) {
-                game.waitingTarget.shots = 1;
-                addLogLocal(`Первый выстрел выполнен. Выберите вторую цель.`);
-                renderLocal();
-                return;
+        // если офлайн или без роли, разрешаем
+        if(selectedRow === null){
+            // выбираем фигуру
+            const piece = boardData[row][col];
+            if(piece && piece.owner === currentTurn){
+                selectedRow = row;
+                selectedCol = col;
+                renderBoard();
+                statusMsgEl.innerText = `Фигура выбрана, выберите клетку для перемещения`;
             } else {
-                addLogLocal(`Второй выстрел завершён.`);
-                cancelTargetLocal();
-                attacker.noShootRest = true;
+                statusMsgEl.innerText = `Выберите свою фигуру (${currentTurn === "light" ? "светлую" : "тёмную"})`;
             }
-        }
-        else if (type === "block") {
-            const ally = getShipLocal(targetId);
-            if (ally && ally.side === attacker.side) { ally.blockActive = true; addLogLocal(`${ally.name} получает блокировку на 1 раунд!`); }
-            cancelTargetLocal();
-        }
-        else if (type === "push") {
-            // толчок теперь меняет позицию врага, но для простоты оставим как в оригинале
-            const enemy = getShipLocal(targetId);
-            if (enemy && enemy.side !== attacker.side) {
-                let newPos = Math.min(4, Math.max(1, enemy.position + 2));
-                enemy.position = newPos;
-                addLogLocal(`${attacker.name} отталкивает ${enemy.name} на позицию ${newPos}`);
-            }
-            cancelTargetLocal();
-        }
-        afterActionLocal();
-        renderLocal();
-    }
-    function cancelTargetLocal() { game.waitingTarget = null; renderLocal(); }
-    function afterActionLocal() { checkRoundEndLocal(); renderLocal(); }
-
-    function checkRoundEndLocal() {
-        const anyEnergy = game.ships.some(s => s.hull > 0 && s.energy > 0);
-        if (!anyEnergy && !game.waitingTarget) {
-            addLogLocal("⚡ Вся энергия исчерпана! Раунд завершён.");
-            game.ships.forEach(s => {
-                if (s.hull > 0) {
-                    s.energy = s.maxEnergy;
-                    if (game.round % 2 === 0 && s.shields < s.maxShields) {
-                        s.shields = Math.min(s.maxShields, s.shields + 1);
-                        addLogLocal(`${s.name}: щиты восстановлены до ${s.shields}`);
-                    }
+        } else {
+            // пытаемся сходить
+            const success = tryMove(selectedRow, selectedCol, row, col);
+            clearSelected();
+            if(success){
+                renderBoard();
+                // после успешного хода отправить состояние в Firebase
+                if(firebaseAvailable && currentRoomId && database){
+                    pushGameStateToFirebase();
                 }
-                s.disabledMove = false;
-                s.underCover = false;
-                s.buffDamage = 0;
-                s.noShootRest = false;
-                if (s.special) s.special.cd = Math.max(0, s.special.cd - 1);
-            });
-            game.round++;
-            game.currentShipId = null;
-            game.waitingTarget = null;
-            game.currentPlayer = (game.round % 2 === 1) ? "rep" : "cis";
-            addLogLocal(`🌌 НАЧАЛСЯ РАУНД ${game.round}. Ход: ${game.currentPlayer === "rep" ? "Республика" : "КНС"}`);
-            renderLocal();
+                // проверка конца игры
+                if(gameOver){
+                    renderBoard();
+                    if(firebaseAvailable && database) pushGameStateToFirebase();
+                }
+            } else {
+                statusMsgEl.innerText = "Неверный ход! Попробуйте снова.";
+                selectedRow = null;
+                renderBoard();
+            }
         }
     }
-
-    function getShipLocal(id) { return game.ships.find(s => s.id === id); }
-    function selectShipLocal(shipId) {
-        if (game.waitingTarget) { addLogLocal("Сначала завершите текущее действие!"); return; }
-        const ship = getShipLocal(shipId);
-        if (!ship || ship.hull <= 0) { addLogLocal("Корабль уничтожен"); return; }
-        if (ship.energy <= 0) { addLogLocal("Нет энергии для действий!"); return; }
-        if (ship.side !== game.currentPlayer) { addLogLocal(`Сейчас ход ${game.currentPlayer === "rep" ? "Республики" : "КНС"}!`); return; }
-        game.currentShipId = shipId;
-        addLogLocal(`Выбран ${ship.name}. Выберите действие.`);
-        renderLocal();
+    
+    // ---------- Firebase СИНХРОНИЗАЦИЯ ----------
+    function pushGameStateToFirebase() {
+        if(!database || !firebaseAvailable) return;
+        if(isSyncing) return;
+        const gameState = {
+            board: boardData.map(row => row.map(cell => cell ? { type: cell.type, owner: cell.owner } : null)),
+            currentTurn: currentTurn,
+            gameOver: gameOver,
+            winner: winner,
+            timestamp: firebase.database.ServerValue.TIMESTAMP
+        };
+        database.ref('games/' + currentRoomId).set(gameState).catch(err => console.warn(err));
     }
-
-    function renderLocal() {
-        document.getElementById("roundValue").innerText = game.round;
-        document.getElementById("turnIndicator").innerHTML = `🎮 Ход: ${game.currentPlayer === "rep" ? "ГАЛАКТИЧЕСКАЯ РЕСПУБЛИКА" : "КОНФЕДЕРАЦИЯ"}`;
-        const repDiv = document.getElementById("republicShips");
-        const cisDiv = document.getElementById("cisShips");
-        repDiv.innerHTML = "";
-        cisDiv.innerHTML = "";
-        game.ships.forEach(ship => {
-            const card = document.createElement("div");
-            card.className = `ship-card ${game.currentShipId === ship.id ? "active-ship" : ""} ${ship.hull <= 0 ? "disabled-ship" : ""}`;
-            if (ship.hull > 0 && !game.waitingTarget && ship.side === game.currentPlayer) {
-                card.onclick = () => selectShipLocal(ship.id);
-            }
-            card.innerHTML = `
-                <div class="ship-name">
-                    <span>${ship.name}</span>
-                    <span class="energy-badge">${ship.hull > 0 ? "активен" : "УНИЧТОЖЕН"}</span>
-                </div>
-                <div class="systems-grid">
-                    <div class="system ${ship.shields <= 0 ? 'broken' : ''}">🛡️ Щиты:<br>${ship.shields}/${ship.maxShields}</div>
-                    <div class="system ${ship.weapons <= 0 ? 'broken' : ''}">🔫 Орудия:<br>${ship.weapons}/${ship.maxWeapons}</div>
-                    <div class="system ${ship.engines <= 0 ? 'broken' : ''}">⚙️ Двигатели:<br>${ship.engines}/${ship.maxEngines}</div>
-                    <div class="system ${ship.hull <= 0 ? 'broken' : ''}">🏗️ Корпус:<br>${ship.hull}/${ship.maxHull}</div>
-                </div>
-                <div class="position">📍 Позиция: ${ship.position}</div>
-                <div style="display: flex; justify-content: space-between; font-size:0.8rem; margin-top:5px;">
-                    <span>⚡ Энергия: ${ship.energy}/${ship.maxEnergy}</span>
-                    <span>📏 ${ship.class}</span>
-                </div>
-                <div class="action-buttons" id="actions-${ship.id}"></div>
-            `;
-            if (ship.hull > 0 && !game.waitingTarget && game.currentShipId === null && ship.energy > 0 && ship.side === game.currentPlayer) {
-                const actsDiv = card.querySelector(`#actions-${ship.id}`);
-                if (actsDiv) {
-                    ["Атаковать", "Маневр", "Прикрытие", "Обход", "Ремонт", "Спец.умение"].forEach(act => {
-                        const btn = document.createElement("button");
-                        btn.innerText = act;
-                        btn.className = "action-btn";
-                        btn.onclick = (e) => { e.stopPropagation(); performActionLocal(ship.id, act); };
-                        actsDiv.appendChild(btn);
-                    });
+    
+    function loadGameFromFirebase(snapshot) {
+        if(!snapshot.exists()) return;
+        const state = snapshot.val();
+        if(!state.board) return;
+        isSyncing = true;
+        // восстанавливаем доску
+        const newBoard = state.board.map(row => row.map(cell => cell ? { type: cell.type, owner: cell.owner } : null));
+        for(let i=0;i<4;i++) for(let j=0;j<4;j++) boardData[i][j] = newBoard[i][j];
+        currentTurn = state.currentTurn;
+        gameOver = state.gameOver || false;
+        winner = state.winner || null;
+        clearSelected();
+        renderBoard();
+        isSyncing = false;
+        // после загрузки - если ход принадлежит локальному игроку, активируем интерфейс
+        if(localPlayerColor && currentTurn === localPlayerColor && !gameOver){
+            statusMsgEl.innerText = "Ваш ход!";
+        }
+    }
+    
+    function subscribeToRoom(roomId) {
+        if(!database) return;
+        currentRoomId = roomId;
+        const gameRef = database.ref('games/' + roomId);
+        gameRef.off(); // отписка
+        gameRef.on('value', (snapshot) => {
+            if(snapshot.exists()){
+                loadGameFromFirebase(snapshot);
+            } else {
+                // если нет данных - инициализируем новую игру и пушим только если хост?
+                if(localPlayerColor === "light") {
+                    initBoard();
+                    pushGameStateToFirebase();
+                    renderBoard();
                 }
             }
-            if (ship.side === "rep") repDiv.appendChild(card);
-            else cisDiv.appendChild(card);
         });
-        if (game.waitingTarget) {
-            document.querySelectorAll(".ship-card").forEach(card => {
-                const nameSpan = card.querySelector(".ship-name span");
-                if (nameSpan) {
-                    const shipName = nameSpan.innerText;
-                    const ship = game.ships.find(s => s.name === shipName);
-                    if (ship && ship.hull > 0) {
-                        const isEnemy = (game.waitingTarget.type === "attack" || game.waitingTarget.type === "disable" || game.waitingTarget.type === "doubleShot") 
-                                    && ship.side !== getShipLocal(game.waitingTarget.attackerId)?.side;
-                        const isAlly = (game.waitingTarget.type === "cover" || game.waitingTarget.type === "coverAlly" || game.waitingTarget.type === "buffAlly" || game.waitingTarget.type === "block")
-                                    && ship.side === getShipLocal(game.waitingTarget.attackerId)?.side;
-                        if (isEnemy || isAlly || game.waitingTarget.type === "repair") {
-                            card.style.cursor = "pointer";
-                            card.style.boxShadow = "0 0 0 2px #eab308";
-                            card.onclick = () => resolveTargetLocal(ship.id);
-                        }
-                    }
-                }
-            });
+    }
+    
+    // Создание / сброс комнаты и присвоение ролей
+    function createOrResetRoom() {
+        if(!database || !firebaseAvailable) {
+            alert("Firebase не настроен, играйте локально");
+            return;
         }
+        initBoard();
+        localPlayerColor = "light";   // создатель комнаты играет светлыми
+        myTurnFlag = (currentTurn === localPlayerColor);
+        pushGameStateToFirebase();
+        renderBoard();
+        document.getElementById("onlineStatus").innerHTML = `✅ Комната "${currentRoomId}" готова. Вы играете за СВЕТ. Ждите оппонента...`;
     }
-
-    // ------------------- ОНЛАЙН РЕЖИМ (PEERJS) -------------------
-    function initOnlineGame(host, roomIdParam, connection) {
-        // аналогично локальной игре, но с отправкой действий оппоненту
-        // Упростим: после каждого действия отправляем полное состояние игры
-        // Для краткости: создаём ту же структуру game, но с флагом online = true.
-        // Здесь будет очень много дублирования, но для демонстрации идеи.
-        // В реальном проекте лучше вынести логику в отдельный класс.
-        alert("Онлайн-режим в разработке. Для простоты оставлен локальный режим. В полной версии будет синхронизация через PeerJS.");
-        // Можно реализовать, но из-за объёма кода здесь ограничимся заглушкой.
+    
+    function joinRoom() {
+        if(!database || !firebaseAvailable) {
+            alert("Firebase не готов");
+            return;
+        }
+        const room = document.getElementById("roomIdInput").value.trim();
+        if(!room) return;
+        currentRoomId = room;
+        // пробуем подписаться и определить роль: если в БД нет данных - становимся dark, иначе смотрим
+        const gameRef = database.ref('games/' + room);
+        gameRef.once('value', (snapshot) => {
+            if(!snapshot.exists()){
+                // нет игры, значит мы тёмные
+                localPlayerColor = "dark";
+                initBoard();   // создаем пустую доску, но загружать нечего, нужно создать состояние для обоих?
+                // отправляем начальное состояние, но чтобы не перетереть хостера, если он не создал, сделаем как dark инициализацию
+                if(!snapshot.exists()){
+                    initBoard();
+                    pushGameStateToFirebase();
+                }
+                renderBoard();
+                document.getElementById("onlineStatus").innerHTML = `🌑 Вы за ТЕМНУЮ сторону. Комната ${room}. Ожидание хода...`;
+            } else {
+                const state = snapshot.val();
+                // подгружаем, но цвет определяем: если нет локального цвета, то смотрим, что за цвет у свободного?
+                // проще: определяем темного, если светлый не занят?
+                // Упростим: тот, кто присоединяется вторым становится dark.
+                localPlayerColor = "dark";
+                loadGameFromFirebase(snapshot);
+                document.getElementById("onlineStatus").innerHTML = `🌑 Вы за ТЕМНУЮ сторону (гость).`;
+            }
+            subscribeToRoom(room);
+            myTurnFlag = (localPlayerColor === currentTurn);
+            renderBoard();
+        });
     }
-
-    // ------------------- Обработчики кнопок -------------------
-    document.getElementById("endRoundBtn").onclick = () => { if (game) forceEndRoundLocal(); };
-    document.getElementById("restartBtn").onclick = () => initGameLocal();
-    document.getElementById("createRoomBtn").onclick = () => {
-        alert("Для простоты онлайн-режим не реализован полностью. Используйте локальный режим.");
+    
+    // Сброс игры локально (офлайн и онлайн по кнопке)
+    function resetGameLocally() {
+        initBoard();
+        clearSelected();
+        if(firebaseAvailable && localPlayerColor && currentRoomId && database) {
+            // если онлайн, то обновляем только если мы хозяин или любой, но чтобы синхронизировать, новый раунд только если не в процессе?
+            if(localPlayerColor === "light") {
+                pushGameStateToFirebase();
+            } else {
+                // тёмный сбрасывает? сделаем запрос на сброс, но просто перезаписываем
+                initBoard();
+                pushGameStateToFirebase();
+            }
+        }
+        renderBoard();
+        statusMsgEl.innerText = "Игра перезапущена!";
+    }
+    
+    function copyRoomId() {
+        const roomVal = document.getElementById("roomIdInput").value;
+        navigator.clipboard.writeText(roomVal);
+        statusMsgEl.innerText = "ID комнаты скопирован: " + roomVal;
+    }
+    
+    // Инициализация событий и старт
+    window.onload = () => {
+        initBoard();
+        renderBoard();
+        document.getElementById("resetBtn").onclick = () => resetGameLocally();
+        document.getElementById("copyRoomBtn").onclick = copyRoomId;
+        document.getElementById("joinRoomBtn").onclick = joinRoom;
+        document.getElementById("createRoomBtn").onclick = () => {
+            const room = document.getElementById("roomIdInput").value.trim();
+            if(room) currentRoomId = room;
+            createOrResetRoom();
+        };
+        // если firebase доступен и пользователь хочет играть онлайн, просто ждём действий
+        if(firebaseAvailable){
+            document.getElementById("onlineStatus").innerHTML = "⚙️ Введите ID и нажмите 'Создать' или 'Подключиться'";
+        }
     };
-    document.getElementById("joinRoomBtn").onclick = () => {
-        alert("Для простоты онлайн-режим не реализован полностью. Используйте локальный режим.");
-    };
-    function forceEndRoundLocal() {
-        if (game.waitingTarget) { addLogLocal("Сначала завершите текущее действие"); return; }
-        game.ships.forEach(s => { if (s.hull > 0) s.energy = 0; });
-        checkRoundEndLocal();
-        renderLocal();
-    }
-
-    initGameLocal();
 </script>
 </body>
 </html>
