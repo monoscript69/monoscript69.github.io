@@ -192,6 +192,18 @@
             margin-top: 12px;
             opacity: 0.7;
         }
+
+        #onlineStatus.your-turn {
+            color: #7fff7f;
+            text-shadow: 0 0 8px #0f0;
+            animation: pulse 2s infinite;
+            font-weight: bold;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
     </style>
 </head>
 <body>
@@ -246,6 +258,7 @@
     let isSyncing = false;      // флаг, чтобы не зацикливать обновления
     let localPlayerColor = null; // "light" или "dark"
     let myTurnFlag = false;
+    let playerId = "player_" + Math.random().toString(36).substr(2, 9); // Уникальный ID сессии
     
     try {
         if (firebaseConfig.apiKey !== "AIzaSyDummyFirebaseKeyReplaceWithYourOwn") {
@@ -356,6 +369,12 @@
         // смена хода
         currentTurn = (currentTurn === "light") ? "dark" : "light";
         const gameEnd = checkGameOver();
+
+        if(firebaseAvailable && currentRoomId && database && localPlayerColor) {
+    // Небольшая задержка, чтобы избежать гонок при быстрых кликах
+            setTimeout(() => pushGameStateToFirebase(), 50);
+        }
+
         return true;
     }
     
@@ -424,44 +443,38 @@
     // Обработка клика
     function onCellClick(row, col){
         if(gameOver) {
-            statusMsgEl.innerText = "Игра завершена, начните новую";
+            statusMsgEl.innerText = "🏁 Игра завершена. Нажмите «НОВАЯ ИГРА»";
             return;
         }
-        // Онлайн-синхронизация: если есть комната и локальный игрок не тот, чей ход или не назначена роль
-        if(firebaseAvailable && localPlayerColor && localPlayerColor !== currentTurn) {
-            statusMsgEl.innerText = "Сейчас ход соперника, ждите...";
+    
+    // 🔐 Блокируем ход, если онлайн и не наша очередь
+        if(firebaseAvailable && localPlayerColor && currentTurn !== localPlayerColor) {
+            statusMsgEl.innerText = "⏳ Сейчас ход соперника, подождите...";
             return;
         }
-        // если офлайн или без роли, разрешаем
+    
         if(selectedRow === null){
-            // выбираем фигуру
             const piece = boardData[row][col];
             if(piece && piece.owner === currentTurn){
                 selectedRow = row;
                 selectedCol = col;
                 renderBoard();
-                statusMsgEl.innerText = `Фигура выбрана, выберите клетку для перемещения`;
+                statusMsgEl.innerText = "✓ Фигура выбрана. Теперь укажите клетку для хода";
             } else {
-                statusMsgEl.innerText = `Выберите свою фигуру (${currentTurn === "light" ? "светлую" : "тёмную"})`;
+                statusMsgEl.innerText = `❌ Выберите свою фигуру (${currentTurn === "light" ? "⚪ светлую" : "⚫ тёмную"})`;
             }
         } else {
-            // пытаемся сходить
             const success = tryMove(selectedRow, selectedCol, row, col);
             clearSelected();
+        
             if(success){
                 renderBoard();
-                // после успешного хода отправить состояние в Firebase
-                if(firebaseAvailable && currentRoomId && database){
-                    pushGameStateToFirebase();
-                }
-                // проверка конца игры
-                if(gameOver){
-                    renderBoard();
-                    if(firebaseAvailable && database) pushGameStateToFirebase();
+            // Синхронизация происходит внутри tryMove после смены хода
+                if(gameOver && firebaseAvailable) {
+                    pushGameStateToFirebase(); // Финальный синк при победе
                 }
             } else {
-                statusMsgEl.innerText = "Неверный ход! Попробуйте снова.";
-                selectedRow = null;
+                statusMsgEl.innerText = "⚠️ Недопустимый ход! Попробуйте другую клетку.";
                 renderBoard();
             }
         }
@@ -469,16 +482,22 @@
     
     // ---------- Firebase СИНХРОНИЗАЦИЯ ----------
     function pushGameStateToFirebase() {
-        if(!database || !firebaseAvailable) return;
-        if(isSyncing) return;
-        const gameState = {
-            board: boardData.map(row => row.map(cell => cell ? { type: cell.type, owner: cell.owner } : null)),
+        if(!database || !firebaseAvailable || !currentRoomId || isSyncing) return;
+    
+        const updateData = {
+            board: boardData.map(row => row.map(cell => 
+                cell ? { type: cell.type, owner: cell.owner } : null
+            )),
             currentTurn: currentTurn,
             gameOver: gameOver,
             winner: winner,
             timestamp: firebase.database.ServerValue.TIMESTAMP
+        // НЕ перезаписываем players! Они управляются отдельно
         };
-        database.ref('games/' + currentRoomId).set(gameState).catch(err => console.warn(err));
+    
+    // Используем update(), чтобы сохранить данные игроков
+        database.ref('games/' + currentRoomId).update(updateData)
+            .catch(err => console.warn("⚠️ Не удалось синхронизировать:", err));
     }
     
     function loadGameFromFirebase(snapshot) {
@@ -505,16 +524,58 @@
         if(!database) return;
         currentRoomId = roomId;
         const gameRef = database.ref('games/' + roomId);
-        gameRef.off(); // отписка
+    
+    // Отписываемся от старых слушателей ЭТОЙ ссылки
+        gameRef.off('value');
+    
         gameRef.on('value', (snapshot) => {
-            if(snapshot.exists()){
-                loadGameFromFirebase(snapshot);
-            } else {
-                // если нет данных - инициализируем новую игру и пушим только если хост?
-                if(localPlayerColor === "light") {
-                    initBoard();
-                    pushGameStateToFirebase();
+            if(isSyncing) return;
+        
+            if(!snapshot.exists()) {
+                if(localPlayerColor) {
+                    document.getElementById("onlineStatus").innerHTML = 
+                        `⚠️ Комната закрыта. Возврат в офлайн-режим.`;
+                }
+                return;
+            }
+        
+            const state = snapshot.val();
+        
+        // Обновляем доску ТОЛЬКО если есть валидные данные
+            if(state.board && Array.isArray(state.board) && state.board.length === 4) {
+                isSyncing = true;
+                try {
+                    const newBoard = state.board.map(row => 
+                        Array.isArray(row) ? row.map(cell => 
+                            cell && cell.type && cell.owner 
+                                ? { type: cell.type, owner: cell.owner } 
+                                : null
+                        ) : Array(4).fill(null)
+                    );
+                
+                    for(let i=0; i<4; i++) 
+                        for(let j=0; j<4; j++) 
+                            boardData[i][j] = newBoard[i][j];
+                
+                    currentTurn = state.currentTurn;
+                    gameOver = state.gameOver === true;
+                    winner = state.winner || null;
+                
+                    clearSelected();
                     renderBoard();
+                } finally {
+                    isSyncing = false;
+                }
+            }
+        
+        // Обновляем статус для локального игрока
+            if(localPlayerColor && !gameOver) {
+                if(currentTurn === localPlayerColor) {
+                    statusMsgEl.innerText = "⚡ Ваш ход! Выберите фигуру";
+                    document.getElementById("onlineStatus").classList.add("your-turn");
+                } else {
+                    statusMsgEl.innerText = "⏳ Ожидание хода соперника...";
+                    document.getElementById("onlineStatus").classList.remove("your-turn");
                 }
             }
         });
@@ -526,12 +587,40 @@
             alert("Firebase не настроен, играйте локально");
             return;
         }
+        const room = document.getElementById("roomIdInput").value.trim() || "dejarik_arena";
+        currentRoomId = room;
+    
+    // Инициализируем доску локально
         initBoard();
-        localPlayerColor = "light";   // создатель комнаты играет светлыми
-        myTurnFlag = (currentTurn === localPlayerColor);
-        pushGameStateToFirebase();
-        renderBoard();
-        document.getElementById("onlineStatus").innerHTML = `✅ Комната "${currentRoomId}" готова. Вы играете за СВЕТ. Ждите оппонента...`;
+    
+    // Создаём состояние с отслеживанием игроков
+        const initialState = {
+            board: boardData.map(row => row.map(cell => 
+                cell ? { type: cell.type, owner: cell.owner } : null
+            )),
+            currentTurn: "light",
+            gameOver: false,
+            winner: null,
+            players: { 
+                light: playerId,  // Хост занимает светлых
+                dark: null 
+            },
+            timestamp: firebase.database.ServerValue.TIMESTAMP
+        };
+    
+        localPlayerColor = "light";
+    
+        database.ref('games/' + room).set(initialState)
+            .then(() => {
+                subscribeToRoom(room);
+                renderBoard();
+                document.getElementById("onlineStatus").innerHTML = 
+                    `✅ Комната "${room}" создана. Вы: <b>СВЕТЛАЯ СТОРОНА</b>.<br>Ждите оппонента или скопируйте ID для приглашения.`;
+            })
+            .catch(err => {
+                console.error("Ошибка создания комнаты:", err);
+                document.getElementById("onlineStatus").innerHTML = `❌ Ошибка: ${err.message}`;
+            });
     }
     
     function joinRoom() {
@@ -540,35 +629,71 @@
             return;
         }
         const room = document.getElementById("roomIdInput").value.trim();
-        if(!room) return;
+        if(!room) {
+            alert("Введите ID комнаты");
+            return;
+        }
         currentRoomId = room;
-        // пробуем подписаться и определить роль: если в БД нет данных - становимся dark, иначе смотрим
         const gameRef = database.ref('games/' + room);
-        gameRef.once('value', (snapshot) => {
-            if(!snapshot.exists()){
-                // нет игры, значит мы тёмные
-                localPlayerColor = "dark";
-                initBoard();   // создаем пустую доску, но загружать нечего, нужно создать состояние для обоих?
-                // отправляем начальное состояние, но чтобы не перетереть хостера, если он не создал, сделаем как dark инициализацию
-                if(!snapshot.exists()){
-                    initBoard();
-                    pushGameStateToFirebase();
+    
+        document.getElementById("onlineStatus").innerHTML = "🔄 Подключение...";
+    
+        gameRef.once('value')
+            .then(snapshot => {
+                if(!snapshot.exists()) {
+                    document.getElementById("onlineStatus").innerHTML = 
+                        `❌ Комната "${room}" не найдена. Попросите хоста создать её.`;
+                    return;
                 }
-                renderBoard();
-                document.getElementById("onlineStatus").innerHTML = `🌑 Вы за ТЕМНУЮ сторону. Комната ${room}. Ожидание хода...`;
-            } else {
+            
                 const state = snapshot.val();
-                // подгружаем, но цвет определяем: если нет локального цвета, то смотрим, что за цвет у свободного?
-                // проще: определяем темного, если светлый не занят?
-                // Упростим: тот, кто присоединяется вторым становится dark.
-                localPlayerColor = "dark";
-                loadGameFromFirebase(snapshot);
-                document.getElementById("onlineStatus").innerHTML = `🌑 Вы за ТЕМНУЮ сторону (гость).`;
-            }
-            subscribeToRoom(room);
-            myTurnFlag = (localPlayerColor === currentTurn);
-            renderBoard();
-        });
+            
+            // Проверяем, не занято ли место для тёмных
+                if(state.players?.dark) {
+                    document.getElementById("onlineStatus").innerHTML = 
+                        `❌ Комната "${room}" уже заполнена.`;
+                    return;
+                }
+            
+            // ЗАХВАТЫВАЕМ место для dark через транзакцию (защита от гонок)
+                gameRef.transaction(currentState => {
+                    if(!currentState || currentState.players?.dark) {
+                        return undefined; // Отмена, если место уже занято
+                    }
+                    currentState.players.dark = playerId;
+                    return currentState;
+                }).then(result => {
+                    if(result.committed) {
+                    // Успешно заняли место!
+                        localPlayerColor = "dark";
+                    
+                    // Загружаем состояние доски
+                        if(state.board) {
+                            const newBoard = state.board.map(row => row.map(cell => 
+                                cell ? { type: cell.type, owner: cell.owner } : null
+                            ));
+                            for(let i=0; i<4; i++) 
+                                for(let j=0; j<4; j++) 
+                                    boardData[i][j] = newBoard[i][j];
+                            currentTurn = state.currentTurn;
+                            gameOver = state.gameOver || false;
+                            winner = state.winner || null;
+                        }
+                    
+                        subscribeToRoom(room);
+                        renderBoard();
+                        document.getElementById("onlineStatus").innerHTML = 
+                            `🌑 Вы подключены! Вы: <b>ТЁМНАЯ СТОРОНА</b>.<br>${currentTurn === "dark" ? "⚡ Ваш ход!" : "Ожидание хода соперника..."}`;
+                    } else {
+                        document.getElementById("onlineStatus").innerHTML = 
+                            `❌ Не удалось присоединиться: место уже занято другим игроком.`;
+                    }
+                });
+            })
+            .catch(err => {
+                console.error("Ошибка подключения:", err);
+                document.getElementById("onlineStatus").innerHTML = `❌ Ошибка сети: ${err.message}`;
+            });
     }
     
     // Сброс игры локально (офлайн и онлайн по кнопке)
