@@ -602,10 +602,11 @@
             gameOver: false,
             winner: null,
             players: { 
-                light: playerId,  // Хост занимает светлых
+                light: playerId,
                 dark: null 
             },
-            timestamp: firebase.database.ServerValue.TIMESTAMP
+            timestamp: firebase.database.ServerValue.TIMESTAMP,
+            version: 1 // 🔥 Добавляем версию для отладки
         };
     
         localPlayerColor = "light";
