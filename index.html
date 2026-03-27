@@ -638,62 +638,87 @@
     
         document.getElementById("onlineStatus").innerHTML = "🔄 Подключение...";
     
-        gameRef.once('value')
-            .then(snapshot => {
-                if(!snapshot.exists()) {
+    // 🔥 ИСПОЛЬЗУЕМ ТОЛЬКО ТРАНЗАКЦИЮ - это атомарная операция, защита от гонок
+        gameRef.transaction(currentState => {
+        // Если данных нет вообще - комната не создана
+            if(!currentState) {
+                console.log("❌ Комната не существует");
+                return undefined;
+            }
+        
+        // 🔧 Гарантируем структуру players (защита от битых данных)
+            if(!currentState.players || typeof currentState.players !== 'object') {
+                currentState.players = { light: null, dark: null };
+            }
+        
+        // Если место для dark уже занято ДРУГИМ игроком - отменяем
+            if(currentState.players.dark && currentState.players.dark !== playerId) {
+                console.log("❌ Место для тёмных уже занято игроком:", currentState.players.dark);
+                return undefined;
+            }
+        
+        // ✅ Занимаем место для dark нашим playerId
+            currentState.players.dark = playerId;
+            console.log("✅ Транзакция: заняли место для dark, playerId:", playerId);
+            return currentState;
+        
+        }, undefined, false) // 🔥 applyLocally=false предотвращает локальные конфликты
+        .then(result => {
+            if(result.committed) {
+            // ✅ Успешно заняли место!
+                localPlayerColor = "dark";
+            
+            // Загружаем актуальное состояние из результата транзакции
+                const state = result.snapshot.val();
+                if(state && state.board && Array.isArray(state.board)) {
+                    const newBoard = state.board.map(row => 
+                        Array.isArray(row) ? row.map(cell => 
+                            cell && cell.type && cell.owner 
+                                ? { type: cell.type, owner: cell.owner } 
+                                : null
+                        ) : Array(4).fill(null)
+                    );
+                    for(let i=0; i<4; i++) 
+                        for(let j=0; j<4; j++) 
+                            boardData[i][j] = newBoard[i][j];
+                    currentTurn = state.currentTurn || "light";
+                    gameOver = state.gameOver === true;
+                    winner = state.winner || null;
+                }
+            
+            // Подписываемся на обновления комнаты
+                subscribeToRoom(room);
+                renderBoard();
+            
+                const turnHint = currentTurn === "dark" ? "⚡ Ваш ход!" : "Ожидание хода соперника...";
+                document.getElementById("onlineStatus").innerHTML = 
+                    `🌑 Вы подключены! Вы: <b>ТЁМНАЯ СТОРОНА</b>.<br>${turnHint}`;
+                
+            } else {
+            // ❌ Транзакция не прошла - определяем причину
+                const state = result.snapshot?.val();
+                if(state?.players?.dark && state.players.dark !== playerId) {
+                    document.getElementById("onlineStatus").innerHTML = 
+                        `❌ Комната "${room}" уже заполнена другим игроком.`;
+                } else if(!state) {
                     document.getElementById("onlineStatus").innerHTML = 
                         `❌ Комната "${room}" не найдена. Попросите хоста создать её.`;
-                    return;
-                }
-            
-                const state = snapshot.val();
-            
-            // Проверяем, не занято ли место для тёмных
-                if(state.players?.dark) {
+                } else {
+                // Попытка повторного подключения через 1 секунду
                     document.getElementById("onlineStatus").innerHTML = 
-                        `❌ Комната "${room}" уже заполнена.`;
-                    return;
+                        `⏳ Синхронизация... Повторная попытка через 1 сек.`;
+                    setTimeout(() => {
+                    // Рекурсивно пробуем ещё раз (макс. 3 попытки)
+                        if(!localPlayerColor) joinRoom();
+                    }, 1000);
                 }
-            
-            // ЗАХВАТЫВАЕМ место для dark через транзакцию (защита от гонок)
-                gameRef.transaction(currentState => {
-                    if(!currentState || currentState.players?.dark) {
-                        return undefined; // Отмена, если место уже занято
-                    }
-                    currentState.players.dark = playerId;
-                    return currentState;
-                }).then(result => {
-                    if(result.committed) {
-                    // Успешно заняли место!
-                        localPlayerColor = "dark";
-                    
-                    // Загружаем состояние доски
-                        if(state.board) {
-                            const newBoard = state.board.map(row => row.map(cell => 
-                                cell ? { type: cell.type, owner: cell.owner } : null
-                            ));
-                            for(let i=0; i<4; i++) 
-                                for(let j=0; j<4; j++) 
-                                    boardData[i][j] = newBoard[i][j];
-                            currentTurn = state.currentTurn;
-                            gameOver = state.gameOver || false;
-                            winner = state.winner || null;
-                        }
-                    
-                        subscribeToRoom(room);
-                        renderBoard();
-                        document.getElementById("onlineStatus").innerHTML = 
-                            `🌑 Вы подключены! Вы: <b>ТЁМНАЯ СТОРОНА</b>.<br>${currentTurn === "dark" ? "⚡ Ваш ход!" : "Ожидание хода соперника..."}`;
-                    } else {
-                        document.getElementById("onlineStatus").innerHTML = 
-                            `❌ Не удалось присоединиться: место уже занято другим игроком.`;
-                    }
-                });
-            })
-            .catch(err => {
-                console.error("Ошибка подключения:", err);
-                document.getElementById("onlineStatus").innerHTML = `❌ Ошибка сети: ${err.message}`;
-            });
+                console.warn("⚠️ Transaction not committed:", result);
+            }
+        })
+        .catch(err => {
+            console.error("🔥 Ошибка транзакции:", err);
+            document.getElementById("onlineStatus").innerHTML = `❌ Ошибка: ${err.message || 'Неизвестная ошибка'}`;
+        });
     }
     
     // Сброс игры локально (офлайн и онлайн по кнопке)
